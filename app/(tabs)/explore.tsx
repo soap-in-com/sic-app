@@ -1,124 +1,141 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image, Platform, StyleSheet } from "react-native";
+import ParallaxScrollView from '@/components/ParallaxScrollView';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { FlatList, Image, Keyboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { Collapsible } from "@/components/Collapsible";
-import { ExternalLink } from "@/components/ExternalLink";
-import ParallaxScrollView from "@/components/ParallaxScrollView";
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
+// Todo 타입 정의
+interface Todo {
+  id: number;
+  task: string;
+  time: string;
+  completed: boolean;
+}
 
-export default function TabTwoScreen() {
+export default function HomeScreen() {
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [newTask, setNewTask] = useState<string>('');
+  const [newTime, setNewTime] = useState<string>('');
+
+  useEffect(() => {
+    // 예제 데이터
+    const exampleTodos: Todo[] = [
+      { id: 1, task: '미팅', time: '22:00', completed: false },
+      { id: 2, task: '영양제', time: '', completed: true },
+      { id: 3, task: '요가', time: '', completed: false },
+    ];
+    setTodos(exampleTodos);
+  }, []);
+
+  const toggleTodo = (id: number) => {
+    setTodos(prevTodos =>
+      prevTodos.map(todo =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      )
+    );
+  };
+
+  const addTodo = () => {
+    if (newTask.trim() === '') return;
+
+    const newTodo: Todo = {
+      id: todos.length + 1,
+      task: newTask,
+      time: newTime,
+      completed: false,
+    };
+
+    setTodos([...todos, newTodo]);
+    setNewTask('');
+    setNewTime('');
+    Keyboard.dismiss();
+  };
+
+  const handleKeyPress = ({ nativeEvent }: { nativeEvent: any }) => {
+    if (nativeEvent.key === 'Enter') {
+      addTodo();
+    }
+  };
+
+  const renderItem = ({ item }: { item: Todo }) => (
+    <TouchableOpacity onPress={() => toggleTodo(item.id)}>
+      <View style={styles.todoItem}>
+        <Ionicons
+          name={item.completed ? 'checkmark-circle' : 'ellipse-outline'}
+          size={24}
+          color={item.completed ? 'orange' : 'grey'}
+        />
+        <Text style={styles.todoText}>{item.task} {item.time && ` ${item.time}`}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: "#D0D0D0", dark: "#353636" }}
+      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
-        <Ionicons size={310} name="code-slash" style={styles.headerImage} />
-      }
-    >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>
-        This app includes example code to help you get started.
-      </ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText>{" "}
-          and{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{" "}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the
-          web version, press <ThemedText type="defaultSemiBold">w</ThemedText>{" "}
-          in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the{" "}
-          <ThemedText type="defaultSemiBold">@2x</ThemedText> and{" "}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to
-          provide files for different screen densities
-        </ThemedText>
         <Image
-          source={require("@/assets/images/react-logo.png")}
-          style={{ alignSelf: "center" }}
+          source={require('@/assets/images/partial-react-logo.png')}
+          style={styles.reactLogo}
         />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText>{" "}
-          to see how to load{" "}
-          <ThemedText style={{ fontFamily: "SpaceMono" }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{" "}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook
-          lets you inspect what the user's current color scheme is, and so you
-          can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{" "}
-          <ThemedText type="defaultSemiBold">
-            components/HelloWave.tsx
-          </ThemedText>{" "}
-          component uses the powerful{" "}
-          <ThemedText type="defaultSemiBold">
-            react-native-reanimated
-          </ThemedText>{" "}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The{" "}
-              <ThemedText type="defaultSemiBold">
-                components/ParallaxScrollView.tsx
-              </ThemedText>{" "}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
+      }>
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle" style={styles.whiteText}>오늘의 todo</ThemedText>
+        
+
+        <FlatList
+          data={todos}
+          renderItem={renderItem}
+          keyExtractor={item => item.id.toString()}
+        />
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: "#808080",
-    bottom: -90,
-    left: -35,
-    position: "absolute",
-  },
   titleContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+  },
+  stepContainer: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  reactLogo: {
+    height: 178,
+    width: 290,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+  },
+  todoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  todoText: {
+    fontSize: 18,
+    marginLeft: 10,
+    color: '#000', // 글씨를 검은색으로 설정
+  },
+  whiteText: {
+    color: '#000', // 글씨를 검은색으로 설정
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginRight: 8,
+    paddingHorizontal: 8,
+    borderRadius: 4,
   },
 });
