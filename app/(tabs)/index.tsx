@@ -1,141 +1,106 @@
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { FlatList, Image, Keyboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import axios from 'axios';
+import React, { useState } from 'react';
+import { Button, Image, Text, TextInput, View } from 'react-native';
 
-// Todo 타입 정의
-interface Todo {
-  id: number;
-  task: string;
-  time: string;
-  completed: boolean;
+const WEATHER_API_KEY = 'YOUR_OPENWEATHERMAP_API_KEY';
+const GOOGLE_API_KEY = 'YOUR_GOOGLE_PLACES_API_KEY';
+
+interface WeatherData {
+    temp: number;
+    description: string;
+    icon: string;
 }
 
-export default function HomeScreen() {
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [newTask, setNewTask] = useState<string>('');
-  const [newTime, setNewTime] = useState<string>('');
+export default function WeatherApp() {
+    const [city, setCity] = useState<string>('');
+    const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+    const [currentTime, setCurrentTime] = useState<string>('');
 
-  useEffect(() => {
-    // 예제 데이터
-    const exampleTodos: Todo[] = [
-      { id: 1, task: '미팅', time: '22:00', completed: false },
-      { id: 2, task: '영양제', time: '', completed: true },
-      { id: 3, task: '요가', time: '', completed: false },
-    ];
-    setTodos(exampleTodos);
-  }, []);
-
-  const toggleTodo = (id: number) => {
-    setTodos(prevTodos =>
-      prevTodos.map(todo =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
-  };
-
-  const addTodo = () => {
-    if (newTask.trim() === '') return;
-
-    const newTodo: Todo = {
-      id: todos.length + 1,
-      task: newTask,
-      time: newTime,
-      completed: false,
+    const handleSearch = () => {
+        if (city.trim() === '') {
+            alert('Please enter a city name.');
+            return;
+        }
+        fetchPlaceDetails(city);
     };
 
-    setTodos([...todos, newTodo]);
-    setNewTask('');
-    setNewTime('');
-    Keyboard.dismiss();
-  };
+    const fetchPlaceDetails = async (city: string) => {
+        try {
+            const response = await axios.get(
+                `https://maps.googleapis.com/maps/api/place/findplacefromtext/json`,
+                {
+                    params: {
+                        input: city,
+                        inputtype: 'textquery',
+                        fields: 'name,geometry',
+                        key: GOOGLE_API_KEY,
+                        language: 'en', // 결과를 영어로 받도록 설정
+                    }
+                }
+            );
 
-  const handleKeyPress = ({ nativeEvent }: { nativeEvent: any }) => {
-    if (nativeEvent.key === 'Enter') {
-      addTodo();
-    }
-  };
+            if (response.data.candidates.length > 0) {
+                const placeName = response.data.candidates[0].name;
+                fetchWeatherData(placeName);
+            } else {
+                alert('No place found with the entered name.');
+            }
+        } catch (error) {
+            console.error('Error fetching place details:', error);
+            alert('Failed to fetch place details. Please try again.');
+        }
+    };
 
-  const renderItem = ({ item }: { item: Todo }) => (
-    <TouchableOpacity onPress={() => toggleTodo(item.id)}>
-      <View style={styles.todoItem}>
-        <Ionicons
-          name={item.completed ? 'checkmark-circle' : 'ellipse-outline'}
-          size={24}
-          color={item.completed ? 'orange' : 'grey'}
-        />
-        <Text style={styles.todoText}>{item.task} {item.time && ` ${item.time}`}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+    const fetchWeatherData = async (city: string) => {
+        try {
+            const response = await axios.get(
+                `https://api.openweathermap.org/data/2.5/weather`,
+                {
+                    params: {
+                        q: city,
+                        units: 'metric',
+                        appid: WEATHER_API_KEY,
+                    }
+                }
+            );
 
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle" style={styles.whiteText}>오늘의 todo</ThemedText>
-        
+            const { temp } = response.data.main;
+            const description = response.data.weather[0].description;
+            const icon = response.data.weather[0].icon;
+            const timezoneOffset = response.data.timezone;
 
-        <FlatList
-          data={todos}
-          renderItem={renderItem}
-          keyExtractor={item => item.id.toString()}
-        />
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+            setWeatherData({ temp, description, icon });
+
+            // 현재 시간을 계산합니다.
+            const localTime = new Date(new Date().getTime() + timezoneOffset * 1000);
+            setCurrentTime(localTime.toLocaleTimeString());
+
+        } catch (error) {
+            console.error('Error fetching weather data:', error);
+            alert('Failed to fetch weather data. Please check the city name and try again.');
+        }
+    };
+
+    return (
+        <View style={{ padding: 20 }}>
+            <TextInput
+                placeholder="Enter city name"
+                value={city}
+                onChangeText={setCity}
+                style={{ borderWidth: 1, padding: 10, marginBottom: 10 }}
+            />
+            <Button title="Search" onPress={handleSearch} />
+            {weatherData && (
+                <View style={{ marginTop: 20 }}>
+                    <Text>Temperature: {weatherData.temp}°C</Text>
+                    <Text>Weather: {weatherData.description}</Text>
+                    <Image
+                        source={{ uri: `http://openweathermap.org/img/w/${weatherData.icon}.png` }}
+                        style={{ width: 50, height: 50 }}
+                    />
+                    <Text>Current Time: {currentTime}</Text>
+                </View>
+            )}
+        </View>
+    );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-  todoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 5,
-  },
-  todoText: {
-    fontSize: 18,
-    marginLeft: 10,
-    color: '#000', // 글씨를 검은색으로 설정
-  },
-  whiteText: {
-    color: '#000', // 글씨를 검은색으로 설정
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  input: {
-    flex: 1,
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    marginRight: 8,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-  },
-});

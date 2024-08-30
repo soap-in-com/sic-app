@@ -5,42 +5,43 @@ import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  FlatList,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  useColorScheme,
   View,
 } from 'react-native';
 
-// Weather 타입 정의
 interface Weather {
-  temp: number;
-  temp_min: number;
-  temp_max: number;
-  condition: string;
-  location: string;
-  pm10: number;
-  pm2_5: number;
-  date: string;
+  temp: number; // 현재 온도
+  temp_min: number; // 최저 온도
+  temp_max: number; // 최고 온도
+  condition: string; // 날씨 상태 (예: "Clear", "Rain")
+  location: string; // 위치 정보 (도시, 국가)
+  pm10: number; // 미세먼지 수치
+  pm2_5: number; // 초미세먼지 수치
+  date: string; // 현재 날짜
 }
 
-interface Todo {
-  id: number;
-  task: string;
-  time: string;
-  completed: boolean;
+interface Medication {
+  id: number; // 복용약 ID
+  name: string; // 복용약 이름
+  time: string; // 복용 시간
 }
 
-type Todos = {
-  [date: string]: Todo[];
-};
+interface Schedule {
+  id: number; // 일정 ID
+  title: string; // 일정 제목
+  time: string; // 일정 시간
+}
 
-const API_KEY = '724e4827102510377b55ebc097c13897';
-const STORAGE_KEY = '@todos';
+const API_KEY = '724e4827102510377b55ebc097c13897'; // OpenWeatherMap API 키
+const MEDICATION_KEY = '@medications'; // AsyncStorage에서 복용약 데이터를 저장하는 키
+const SCHEDULE_KEY = '@schedules'; // AsyncStorage에서 일정 데이터를 저장하는 키
 
 const icons: { [key: string]: keyof typeof Ionicons.glyphMap } = {
+  // 날씨 상태에 따라 아이콘 매핑
   Clouds: 'cloud',
   Clear: 'sunny',
   Snow: 'snow',
@@ -70,44 +71,53 @@ const WeatherScreen: React.FC = () => {
     date: '',
   });
 
-  const [todos, setTodos] = useState<Todo[]>([]);
-  
-  const systemTheme = useColorScheme();
-  const [theme, setTheme] = useState<'light' | 'dark'>(systemTheme || 'light');
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
 
   useEffect(() => {
+    // 앱이 로드될 때 실행되는 함수
     const fetchWeather = async () => {
-      await getLocation();
-    };
-
-    const loadTodos = async () => {
       try {
-        const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);
-        const loadedTodos = jsonValue != null ? JSON.parse(jsonValue) : {};
-        const today = new Date().toISOString().split('T')[0];
-        setTodos(loadedTodos[today] || []);
-      } catch (e) {
-        console.error('Failed to load todos from storage:', e);
+        await getLocation(); // 위치를 가져와서 날씨 데이터를 불러옴
+      } catch (error) {
+        Alert.alert('날씨 데이터를 불러오지 못했습니다.', '잠시 후 다시 시도해주세요.');
+        console.error('Weather fetch error:', error);
       }
     };
 
-    fetchWeather();
-    loadTodos();
+    const loadMedications = async () => {
+      // 복용약 데이터를 AsyncStorage에서 불러옴
+      try {
+        const jsonValue = await AsyncStorage.getItem(MEDICATION_KEY);
+        const loadedMedications = jsonValue != null ? JSON.parse(jsonValue) : {};
+        const today = new Date().toISOString().split('T')[0];
+        setMedications(loadedMedications[today] || []);
+      } catch (e) {
+        Alert.alert('복용약을 불러오지 못했습니다.', '잠시 후 다시 시도해주세요.');
+        console.error('Failed to load medications from storage:', e);
+      }
+    };
+
+    const loadSchedules = async () => {
+      // 일정을 AsyncStorage에서 불러옴
+      try {
+        const jsonValue = await AsyncStorage.getItem(SCHEDULE_KEY);
+        const loadedSchedules = jsonValue != null ? JSON.parse(jsonValue) : {};
+        const today = new Date().toISOString().split('T')[0];
+        setSchedules(loadedSchedules[today] || []);
+      } catch (e) {
+        Alert.alert('일정을 불러오지 못했습니다.', '잠시 후 다시 시도해주세요.');
+        console.error('Failed to load schedules from storage:', e);
+      }
+    };
+
+    fetchWeather(); // 날씨 정보 불러오기
+    loadMedications(); // 복용약 정보 불러오기
+    loadSchedules(); // 일정 정보 불러오기
   }, []);
 
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
-  };
-
-  const toggleTodo = (id: number) => {
-    setTodos((prevTodos) =>
-      prevTodos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
-  };
-
   const getLocation = async () => {
+    // 위치 권한 요청 및 현재 위치를 기반으로 날씨 정보 가져오기
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -119,19 +129,22 @@ const WeatherScreen: React.FC = () => {
       const latitude = locationData.coords.latitude;
       const longitude = locationData.coords.longitude;
 
+      // 현재 위치를 기반으로 날씨 정보 불러오기
       const weatherResult = await axios.get(
         `http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
       );
 
-      const temp = roundTemperature(weatherResult.data.main.temp);
-      const condition = weatherResult.data.weather[0].main;
+      const temp = roundTemperature(weatherResult.data.main.temp); // 온도 반올림
+      const condition = weatherResult.data.weather[0].main; // 날씨 상태
 
+      // 예보 데이터를 통해 최저/최고 온도 계산
       const forecastResult = await axios.get(
         `http://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
       );
 
       const { minTemp, maxTemp } = calculateMinMaxTemp(forecastResult.data);
 
+      // 위치 이름 불러오기
       const locationResult = await axios.get(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
       );
@@ -141,12 +154,13 @@ const WeatherScreen: React.FC = () => {
       const country = '대한민국';
       const location = `${city}, ${country}`;
 
+      // 대기오염 정보 불러오기
       const pollutionResult = await axios.get(
         `http://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`
       );
 
-      const pm10 = pollutionResult.data.list[0].components.pm10;
-      const pm2_5 = pollutionResult.data.list[0].components.pm2_5;
+      const pm10 = pollutionResult.data.list[0].components.pm10; // 미세먼지 농도
+      const pm2_5 = pollutionResult.data.list[0].components.pm2_5; // 초미세먼지 농도
 
       const date = new Date().toLocaleDateString('ko-KR', {
         year: 'numeric',
@@ -155,13 +169,15 @@ const WeatherScreen: React.FC = () => {
         weekday: 'long',
       });
 
+      // 상태 업데이트
       setWeather({ temp, temp_min: minTemp, temp_max: maxTemp, condition, location, pm10, pm2_5, date });
     } catch (error) {
       Alert.alert('위치를 찾을 수가 없습니다.', '위치를 동의해주세요!');
-      console.error(error);
+      console.error('Location or Weather fetch error:', error);
     }
   };
 
+  // 온도 반올림 함수
   const roundTemperature = (temp: number) => {
     const roundedTemp = Math.floor(temp);
     if ((temp - roundedTemp) >= 0.5) {
@@ -170,6 +186,7 @@ const WeatherScreen: React.FC = () => {
     return roundedTemp;
   };
 
+  // 예보 데이터에서 최저/최고 온도 계산
   const calculateMinMaxTemp = (forecastData: any) => {
     let minTemp = Number.MAX_VALUE;
     let maxTemp = Number.MIN_VALUE;
@@ -187,6 +204,7 @@ const WeatherScreen: React.FC = () => {
     return { minTemp: roundTemperature(minTemp), maxTemp: roundTemperature(maxTemp) };
   };
 
+  // 미세먼지 농도에 따른 메시지 생성
   const getAirQualityLevel = (pm: number) => {
     if (pm <= 30) return '좋음';
     if (pm <= 80) return '보통';
@@ -204,59 +222,96 @@ const WeatherScreen: React.FC = () => {
     return { pm10Level, message };
   };
 
-  const { pm10Level, message } = getAirQualityMessage(weather.pm10);
-  const umbrellaMessage = weather.condition.includes('Rain') ? '우산을 챙기세요! ☔' : '';
-  const hatMessage = weather.temp >= 33 ? '모자를 챙기세요! 🧢' : ''; // 33도 이상일 때 문구 추가
+  // 날씨에 따른 준비물 메시지 생성
+  const getWeatherPreparationMessage = (condition: string, temp: number) => {
+    let preparationMessage = '';
+
+    if (condition.includes('Rain')) {
+      preparationMessage = '우산을 챙기세요! ☔';
+    } else if (temp >= 35) {
+      preparationMessage = '외출을 자제해주세요! ☀️';
+    } else if (condition.includes('Snow')) {
+      preparationMessage = '따뜻한 옷을 입으세요! 🧥';
+    }
+
+    return preparationMessage;
+  };
+
+  const { pm10Level, message } = getAirQualityMessage(weather.pm10); // 미세먼지 관련 메시지
+  const preparationMessage = getWeatherPreparationMessage(weather.condition, weather.temp); // 날씨 관련 메시지
+
+  // 알림 사항 정의 (고정된 목록)
+  const alerts = [
+    { id: 1, task: '가스 점검하기 🔥' },
+    { id: 2, task: '불끄기 확인하기 💡' },
+    { id: 3, task: '병원 갈 때 주민증 챙기기 🪪' },
+  ];
 
   return (
-    <SafeAreaView style={[styles.container, theme === 'dark' ? styles.darkContainer : styles.lightContainer]}>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <TouchableOpacity onPress={toggleTheme} style={styles.themeToggle}>
-          <Text style={theme === 'dark' ? styles.darkText : styles.lightText}>
-            {theme === 'dark' ? '🌚' : '🌞'}
-          </Text>
-        </TouchableOpacity>
-        <Text style={[styles.dateText, theme === 'dark' ? styles.darkText : styles.lightText]}>{weather.date}</Text>
-        <View style={styles.weatherContainer}>
-          <Ionicons name={icons[weather.condition] || 'alert'} size={100} color={theme === 'dark' ? 'white' : 'black'} />
-          <Text style={[styles.temperatureText, theme === 'dark' ? styles.darkText : styles.lightText]}>{weather.temp}°C</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        <View style={styles.headerContainer}>
+          <Text style={styles.dateText}>{weather.date}</Text>
+          <View style={styles.weatherContainer}>
+            <Ionicons name={icons[weather.condition] || 'alert'} size={100} color='black' />
+            <Text style={styles.temperatureText}>{weather.temp}°C</Text>
+          </View>
+          <Text style={styles.minMaxText}>최저: {weather.temp_min}°C / 최고: {weather.temp_max}°C</Text>
+          <Text style={styles.locationText}>{weather.location}</Text>
+          <Text style={styles.pollutionText}>미세먼지: {weather.pm10} µg/m³ ({pm10Level})</Text>
+          {preparationMessage ? <Text style={styles.preparationMessageText}>{preparationMessage}</Text> : null}
+          {message ? <Text style={styles.messageText}>{message}</Text> : null}
         </View>
-        <Text style={[styles.minMaxText, theme === 'dark' ? styles.darkText : styles.lightText]}>최저: {weather.temp_min}°C / 최고: {weather.temp_max}°C</Text>
-        <Text style={[styles.locationText, theme === 'dark' ? styles.darkText : styles.lightText]}>{weather.location}</Text>
-        <Text style={[styles.pollutionText, theme === 'dark' ? styles.darkText : styles.lightText]}>미세먼지: {weather.pm10} µg/m³ ({pm10Level})</Text>
-        {umbrellaMessage ? <Text style={[styles.umbrellaMessageText, theme === 'dark' ? styles.darkText : styles.lightText]}>{umbrellaMessage}</Text> : null}
-        {hatMessage ? <Text style={[styles.hatMessageText, theme === 'dark' ? styles.darkText : styles.lightText]}>{hatMessage}</Text> : null}
-        {message ? <Text style={[styles.messageText, theme === 'dark' ? styles.darkText : styles.lightText]}>{message}</Text> : null}
-        
-        {/* 할 일 목록 표시 */}
-        <View style={styles.todoContainer}>
-          <Text style={styles.todoTitle}>오늘의 할 일</Text>
-          {todos.length > 0 ? (
-            todos.map(todo => (
-              <TouchableOpacity key={todo.id} onPress={() => toggleTodo(todo.id)}>
-                <View style={styles.todoItem}>
-                  <Ionicons
-                    name={todo.completed ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={24}
-                    color={todo.completed ? 'green' : 'grey'}
-                  />
-                  <Text style={styles.todoText}>
-                    {todo.task} {todo.time && `- ${todo.time}`}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <Text style={styles.todoText}>오늘 할 일이 없습니다.</Text>
-          )}
+
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>알림 사항</Text>
+          <FlatList
+            data={alerts}
+            renderItem={({ item }) => (
+              <View style={styles.todoItem}>
+                <Ionicons name="alert-circle-outline" size={24} color="orange" />
+                <Text style={styles.todoText}>
+                  {item.task}
+                </Text>
+              </View>
+            )}
+            keyExtractor={item => item.id.toString()}
+            ListEmptyComponent={<Text style={styles.emptyText}>알림 사항이 없습니다.</Text>}
+          />
+        </View>
+
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>오늘의 복용약 💊</Text>
+          <FlatList
+            data={medications}
+            renderItem={({ item }) => (
+              <View style={styles.medicationItem}>
+                <Text style={styles.medicationText}>
+                  {item.name} {item.time && `- ${item.time}`}
+                </Text>
+              </View>
+            )}
+            keyExtractor={item => item.id.toString()}
+            ListEmptyComponent={<Text style={styles.emptyText}>오늘 복용할 약이 없습니다.</Text>}
+          />
+        </View>
+
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>오늘의 일정 📆</Text>
+          <FlatList
+            data={schedules}
+            renderItem={({ item }) => (
+              <View style={styles.scheduleItem}>
+                <Text style={styles.scheduleText}>
+                  {item.title} {item.time && `- ${item.time}`}
+                </Text>
+              </View>
+            )}
+            keyExtractor={item => item.id.toString()}
+            ListEmptyComponent={<Text style={styles.emptyText}>오늘 일정이 없습니다.</Text>}
+          />
         </View>
       </ScrollView>
-
-      {/* 길찾기 버튼 */}
-      <TouchableOpacity style={styles.navigationButton}>
-        <Ionicons name="navigate-outline" size={24} color="white" />
-        <Text style={styles.navigationButtonText}>길찾기</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -264,26 +319,16 @@ const WeatherScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  scrollViewContent: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  lightContainer: {
     backgroundColor: '#FFF',
   },
-  darkContainer: {
-    backgroundColor: '#000',
+  headerContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
   },
   dateText: {
     fontSize: 18,
     marginVertical: 5,
-  },
-  lightText: {
     color: '#000',
-  },
-  darkText: {
-    color: '#FFF',
   },
   weatherContainer: {
     flexDirection: 'row',
@@ -293,64 +338,43 @@ const styles = StyleSheet.create({
   temperatureText: {
     fontSize: 48,
     marginLeft: 10,
+    color: '#000',
   },
   minMaxText: {
     fontSize: 16,
     marginVertical: 5,
+    color: '#000',
   },
   locationText: {
     fontSize: 14,
     marginVertical: 5,
+    color: '#000',
   },
   pollutionText: {
     fontSize: 14,
     marginVertical: 5,
+    color: '#000',
   },
-  umbrellaMessageText: {
+  preparationMessageText: {
     fontSize: 16,
     marginVertical: 5,
-  },
-  hatMessageText: {
-    fontSize: 16,
-    marginVertical: 5,
-    color: 'red', // 모자 문구를 빨간색으로 강조
+    color: '#000',
   },
   messageText: {
     fontSize: 16,
     marginVertical: 5,
+    color: '#000',
   },
-  themeToggle: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-  },
-  navigationButton: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  navigationButtonText: {
-    color: 'white',
-    marginLeft: 5,
-    fontWeight: 'bold',
-  },
-  todoContainer: {
-    marginTop: 20,
-    width: '100%',
+  sectionContainer: {
     paddingHorizontal: 20,
-    alignItems: 'center', // 할 일 목록 중앙 정렬
+    paddingBottom: 20,
   },
-  todoTitle: {
+  sectionTitle: {
     fontSize: 20,
     marginBottom: 10,
     fontWeight: 'bold',
     color: '#1e90ff',
-    textAlign: 'center', // 타이틀 중앙 정렬
+    textAlign: 'center',
   },
   todoItem: {
     flexDirection: 'row',
@@ -359,9 +383,27 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   todoText: {
-    fontSize: 18, // 텍스트 크기를 좀 더 크게
+    fontSize: 18,
     marginLeft: 10,
-    color: '#000', // 텍스트 색상을 검정으로
+    color: '#000',
+  },
+  medicationItem: {
+    marginVertical: 5,
+  },
+  medicationText: {
+    fontSize: 18,
+    color: '#000',
+  },
+  scheduleItem: {
+    marginVertical: 5,
+  },
+  scheduleText: {
+    fontSize: 18,
+    color: '#000',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#888',
   },
 });
 

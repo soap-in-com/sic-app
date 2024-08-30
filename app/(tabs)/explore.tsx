@@ -85,6 +85,7 @@ export default function HomeScreen() {
         
 
         <FlatList
+          horizontal
           data={todos}
           renderItem={renderItem}
           keyExtractor={item => item.id.toString()}
