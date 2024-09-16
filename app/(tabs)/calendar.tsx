@@ -39,8 +39,7 @@ const extractInfoFromText = (
     ? '장소 없음'
     : '내용 없음';
 
-  const result = [date, time, content].filter(Boolean).join(' ');
-  return result;
+  return [date, time, content].filter(Boolean).join(' ');
 };
 
 const ScheduleAndMedicineScreen: React.FC = () => {
@@ -57,6 +56,12 @@ const ScheduleAndMedicineScreen: React.FC = () => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<RecordingItem | null>(null);
+  const [selectedListType, setSelectedListType] = useState<
+    'schedule' | 'medicine' | 'memo' | null
+  >(null);
+  const [audioUri, setAudioUri] = useState<string | null>(null); // 녹음된 파일 URI 저장
 
   useEffect(() => {
     const requestPermission = async () => {
@@ -117,7 +122,6 @@ const ScheduleAndMedicineScreen: React.FC = () => {
 
   const stopRecording = async (
     setter: React.Dispatch<React.SetStateAction<string>>,
-    listSetter: React.Dispatch<React.SetStateAction<RecordingItem[]>>,
     type: 'schedule' | 'medicine' | 'memo'
   ) => {
     if (!recording || isProcessing) return;
@@ -129,6 +133,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       setRecording(null);
+      setAudioUri(uri); // 녹음된 파일의 URI 저장
 
       if (uri) {
         const base64 = await FileSystem.readAsStringAsync(uri, {
@@ -165,11 +170,8 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         const recordedText = bestAlternative?.transcript || '인식 실패';
         setter(recordedText);
 
-        if (recordedText !== '인식 실패') {
-          const formattedText = extractInfoFromText(recordedText, type);
-          listSetter((prevList) => [...prevList, { text: formattedText, uri }]);
-        } else {
-          Alert.alert('알림', '음성 인식이 실패하여 저장되지 않았습니다.');
+        if (recordedText === '인식 실패') {
+          Alert.alert('알림', '음성 인식이 실패했습니다. 다시 시도해주세요.');
         }
       }
     } catch (error) {
@@ -180,64 +182,89 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     }
   };
 
+  const saveRecording = (
+    text: string,
+    listSetter: React.Dispatch<React.SetStateAction<RecordingItem[]>>,
+    type: 'schedule' | 'medicine' | 'memo'
+  ) => {
+    if (text && text !== '인식 실패' && audioUri) {
+      const formattedText = extractInfoFromText(text, type);
+      listSetter((prevList) => [
+        ...prevList,
+        { text: formattedText, uri: audioUri },
+      ]);
+    } else {
+      Alert.alert('알림', '인식된 텍스트가 없거나 인식이 실패했습니다.');
+    }
+  };
+
   const handleRetake = async (
     setter: React.Dispatch<React.SetStateAction<string>>
   ) => {
     setter('');
     setIsRecording(false);
 
-    // 현재 녹음 중지
     if (recording) {
       await recording.stopAndUnloadAsync();
       setRecording(null);
     }
   };
 
-  const cancelModal = () => {
-    // 모달이 닫힐 때, 녹음 중이면 중단
+  const resetModal = () => {
     if (recording) {
       recording.stopAndUnloadAsync();
       setRecording(null);
-      setIsRecording(false);
     }
-  };
-
-  const openScheduleModal = () => {
+    setIsRecording(false);
+    setIsProcessing(false);
+    setAudioUri(null); // 저장된 URI 초기화
     setScheduleText('');
-    setRecording(null);
-    setIsRecording(false);
-    setScheduleModalVisible(true);
-  };
-
-  const openMedicineModal = () => {
     setMedicineText('');
-    setRecording(null);
-    setIsRecording(false);
-    setMedicineModalVisible(true);
-  };
-
-  const openMemoModal = () => {
     setMemoText('');
-    setRecording(null);
-    setIsRecording(false);
-    setMemoModalVisible(true);
   };
 
   const playRecording = async (uri: string) => {
     try {
-      // 스피커 모드로 변경
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         shouldDuckAndroid: false,
         staysActiveInBackground: true,
-        playThroughEarpieceAndroid: false, // 안드로이드에서 스피커 사용
+        playThroughEarpieceAndroid: false, // 스피커 사용
       });
 
       const { sound } = await Audio.Sound.createAsync({ uri });
       await sound.playAsync();
     } catch (error) {
       console.error('음성 재생 중 오류 발생:', error);
+    }
+  };
+
+  const openDeleteModal = (
+    item: RecordingItem,
+    type: 'schedule' | 'medicine' | 'memo'
+  ) => {
+    setSelectedItem(item);
+    setSelectedListType(type);
+    setIsDeleteModalVisible(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedItem && selectedListType) {
+      const updateList = (list: RecordingItem[]) =>
+        list.filter((item) => item !== selectedItem);
+
+      if (selectedListType === 'schedule') {
+        setScheduleList(updateList);
+      } else if (selectedListType === 'medicine') {
+        setMedicineList(updateList);
+      } else if (selectedListType === 'memo') {
+        setMemoList(updateList);
+      }
+
+      setSelectedItem(null);
+      setSelectedListType(null);
+      setIsDeleteModalVisible(false);
     }
   };
 
@@ -264,11 +291,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                 />
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              onPress={() =>
-                listSetter((prevList) => prevList.filter((_, i) => i !== index))
-              }
-            >
+            <TouchableOpacity onPress={() => openDeleteModal(item, type)}>
               <MaterialIcons name="delete" size={40} color="#f44336" />
             </TouchableOpacity>
           </View>
@@ -283,19 +306,31 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.squareButton2}
-            onPress={openScheduleModal}
+            onPress={() => {
+              resetModal();
+              setScheduleModalVisible(true);
+            }}
           >
             <Text style={styles.buttonText}>일정등록</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.squareButton1}
-            onPress={openMedicineModal}
+            onPress={() => {
+              resetModal();
+              setMedicineModalVisible(true);
+            }}
           >
             <Text style={styles.buttonText}>복용약등록</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.memoButton} onPress={openMemoModal}>
+        <TouchableOpacity
+          style={styles.memoButton}
+          onPress={() => {
+            resetModal();
+            setMemoModalVisible(true);
+          }}
+        >
           <Text style={styles.buttonText}>메모등록</Text>
         </TouchableOpacity>
 
@@ -313,11 +348,36 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         )}
         {renderRecordingList('메모등록내역', memoList, setMemoList, 'memo')}
 
+        {/* 삭제 확인 모달 */}
+        <Modal
+          isVisible={isDeleteModalVisible}
+          onBackdropPress={() => setIsDeleteModalVisible(false)}
+          style={styles.modal}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>삭제하시겠습니까?</Text>
+            <View style={styles.bottomBar}>
+              <TouchableOpacity
+                style={[styles.bottomButton, styles.saveButton]}
+                onPress={confirmDelete}
+              >
+                <Text style={styles.bottomButtonText}>예</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.bottomButton, styles.cancelButton]}
+                onPress={() => setIsDeleteModalVisible(false)}
+              >
+                <Text style={styles.bottomButtonText}>아니요</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         {/* 일정 등록 모달 */}
         <Modal
           isVisible={isScheduleModalVisible}
+          onModalHide={resetModal}
           style={styles.modal}
-          onModalHide={cancelModal} // 모달 닫힐 때 녹음 중단 처리
         >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
@@ -328,12 +388,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             <TouchableOpacity
               onPress={
                 isRecording
-                  ? () =>
-                      stopRecording(
-                        setScheduleText,
-                        setScheduleList,
-                        'schedule'
-                      )
+                  ? () => stopRecording(setScheduleText, 'schedule')
                   : () => startRecording(setScheduleText)
               }
               style={styles.voiceButton}
@@ -354,7 +409,10 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             <View style={styles.bottomBar}>
               <TouchableOpacity
                 style={[styles.bottomButton, styles.saveButton]}
-                onPress={() => setScheduleModalVisible(false)}
+                onPress={() => {
+                  saveRecording(scheduleText, setScheduleList, 'schedule');
+                  setScheduleModalVisible(false);
+                }}
               >
                 <Text style={styles.bottomButtonText}>저장</Text>
               </TouchableOpacity>
@@ -371,8 +429,8 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         {/* 복용약 등록 모달 */}
         <Modal
           isVisible={isMedicineModalVisible}
+          onModalHide={resetModal}
           style={styles.modal}
-          onModalHide={cancelModal} // 모달 닫힐 때 녹음 중단 처리
         >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
@@ -383,12 +441,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             <TouchableOpacity
               onPress={
                 isRecording
-                  ? () =>
-                      stopRecording(
-                        setMedicineText,
-                        setMedicineList,
-                        'medicine'
-                      )
+                  ? () => stopRecording(setMedicineText, 'medicine')
                   : () => startRecording(setMedicineText)
               }
               style={styles.voiceButton}
@@ -409,7 +462,10 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             <View style={styles.bottomBar}>
               <TouchableOpacity
                 style={[styles.bottomButton, styles.saveButton]}
-                onPress={() => setMedicineModalVisible(false)}
+                onPress={() => {
+                  saveRecording(medicineText, setMedicineList, 'medicine');
+                  setMedicineModalVisible(false);
+                }}
               >
                 <Text style={styles.bottomButtonText}>저장</Text>
               </TouchableOpacity>
@@ -426,8 +482,8 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         {/* 메모 등록 모달 */}
         <Modal
           isVisible={isMemoModalVisible}
+          onModalHide={resetModal}
           style={styles.modal}
-          onModalHide={cancelModal} // 모달 닫힐 때 녹음 중단 처리
         >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
@@ -438,7 +494,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             <TouchableOpacity
               onPress={
                 isRecording
-                  ? () => stopRecording(setMemoText, setMemoList, 'memo')
+                  ? () => stopRecording(setMemoText, 'memo')
                   : () => startRecording(setMemoText)
               }
               style={styles.voiceButton}
@@ -459,7 +515,10 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             <View style={styles.bottomBar}>
               <TouchableOpacity
                 style={[styles.bottomButton, styles.saveButton]}
-                onPress={() => setMemoModalVisible(false)}
+                onPress={() => {
+                  saveRecording(memoText, setMemoList, 'memo');
+                  setMemoModalVisible(false);
+                }}
               >
                 <Text style={styles.bottomButtonText}>저장</Text>
               </TouchableOpacity>
@@ -541,7 +600,7 @@ const styles = StyleSheet.create({
     marginRight: 20,
   },
   listItem: {
-    fontSize: 30,
+    fontSize: 36,
     flexWrap: 'wrap',
   },
   listItemButtons: {
