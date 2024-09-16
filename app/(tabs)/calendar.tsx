@@ -1,46 +1,69 @@
-import { MaterialIcons } from "@expo/vector-icons";
-import { Audio } from "expo-av";
-import * as FileSystem from "expo-file-system";
-import React, { useEffect, useState } from "react";
+import { MaterialIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import Modal from "react-native-modal";
+} from 'react-native';
+import Modal from 'react-native-modal';
 
-const GOOGLE_CLOUD_API_KEY = "AIzaSyCRBV4NPRexVT_2yjvT1ogr4lxEWNQjMv4"; // API 키를 여기에 추가하세요.
+const GOOGLE_CLOUD_API_KEY = 'AIzaSyCRBV4NPRexVT_2yjvT1ogr4lxEWNQjMv4';
 
 type RecordingItem = {
   text: string;
   uri: string;
 };
 
+const extractInfoFromText = (
+  text: string,
+  type: 'schedule' | 'medicine' | 'memo'
+) => {
+  const dateRegex = /\d{1,2}월 \d{1,2}일/;
+  const timeRegex = /(오전|오후)?\s?\d{1,2}시/;
+
+  const dateMatch = text.match(dateRegex);
+  const timeMatch = text.match(timeRegex);
+
+  const date = dateMatch ? dateMatch[0] : '';
+  const time = timeMatch ? timeMatch[0] : '';
+
+  let remainingText = text.replace(dateRegex, '').replace(timeRegex, '').trim();
+  let content = remainingText
+    ? remainingText
+    : type === 'schedule'
+    ? '장소 없음'
+    : '내용 없음';
+
+  const result = [date, time, content].filter(Boolean).join(' ');
+  return result;
+};
+
 const ScheduleAndMedicineScreen: React.FC = () => {
   const [isScheduleModalVisible, setScheduleModalVisible] = useState(false);
   const [isMedicineModalVisible, setMedicineModalVisible] = useState(false);
-  const [scheduleText, setScheduleText] = useState("");
-  const [medicineText, setMedicineText] = useState("");
+  const [scheduleText, setScheduleText] = useState('');
+  const [medicineText, setMedicineText] = useState('');
   const [scheduleList, setScheduleList] = useState<RecordingItem[]>([]);
   const [medicineList, setMedicineList] = useState<RecordingItem[]>([]);
+  const [memoText, setMemoText] = useState('');
+  const [memoList, setMemoList] = useState<RecordingItem[]>([]);
+  const [isMemoModalVisible, setMemoModalVisible] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<RecordingItem | null>(null);
-  const [selectedListSetter, setSelectedListSetter] = useState<React.Dispatch<
-    React.SetStateAction<RecordingItem[]>
-  > | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
     const requestPermission = async () => {
       const { status } = await Audio.requestPermissionsAsync();
-      setHasPermission(status === "granted");
-      if (status !== "granted") {
-        Alert.alert("권한 거부됨", "앱에서 마이크 접근 권한이 필요합니다.");
+      setHasPermission(status === 'granted');
+      if (status !== 'granted') {
+        Alert.alert('권한 거부됨', '앱에서 마이크 접근 권한이 필요합니다.');
       }
     };
 
@@ -51,7 +74,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     setter: React.Dispatch<React.SetStateAction<string>>
   ) => {
     if (!hasPermission || isProcessing) {
-      Alert.alert("권한 필요", "마이크 접근 권한이 필요합니다.");
+      Alert.alert('권한 필요', '마이크 접근 권한이 필요합니다.');
       return;
     }
 
@@ -61,10 +84,9 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         playsInSilentModeIOS: true,
       });
 
-      console.log("Starting recording...");
       const { recording } = await Audio.Recording.createAsync({
         android: {
-          extension: ".3gp",
+          extension: '.3gp',
           outputFormat: 1,
           audioEncoder: 1,
           sampleRate: 16000,
@@ -72,7 +94,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
           bitRate: 96000,
         },
         ios: {
-          extension: ".caf",
+          extension: '.caf',
           audioQuality: 127,
           sampleRate: 16000,
           numberOfChannels: 1,
@@ -82,30 +104,30 @@ const ScheduleAndMedicineScreen: React.FC = () => {
           linearPCMIsFloat: false,
         },
         web: {
-          mimeType: "audio/webm",
+          mimeType: 'audio/webm',
           bitsPerSecond: 128000,
         },
       });
       setRecording(recording);
-      console.log("Recording started");
+      setIsRecording(true);
     } catch (err) {
-      console.error("Failed to start recording", err);
+      console.error('Failed to start recording', err);
     }
   };
 
   const stopRecording = async (
     setter: React.Dispatch<React.SetStateAction<string>>,
-    listSetter: React.Dispatch<React.SetStateAction<RecordingItem[]>>
+    listSetter: React.Dispatch<React.SetStateAction<RecordingItem[]>>,
+    type: 'schedule' | 'medicine' | 'memo'
   ) => {
-    console.log("Stopping recording...");
     if (!recording || isProcessing) return;
 
-    setIsProcessing(true); // 처리 중 상태 설정
+    setIsProcessing(true);
+    setIsRecording(false);
 
     try {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
-      console.log("Recording stopped and stored at", uri);
       setRecording(null);
 
       if (uri) {
@@ -116,16 +138,16 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         const response = await fetch(
           `https://speech.googleapis.com/v1/speech:recognize?key=${GOOGLE_CLOUD_API_KEY}`,
           {
-            method: "POST",
+            method: 'POST',
             headers: {
-              "Content-Type": "application/json",
+              'Content-Type': 'application/json',
             },
             body: JSON.stringify({
               config: {
-                encoding: "LINEAR16",
+                encoding: 'LINEAR16',
                 sampleRateHertz: 16000,
-                languageCode: "ko-KR",
-                model: "command_and_search",
+                languageCode: 'ko-KR',
+                model: 'command_and_search',
               },
               audio: {
                 content: base64,
@@ -135,351 +157,450 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         );
 
         const data = await response.json();
-        console.log(data); // 응답 데이터 확인을 위한 로그
 
         const bestAlternative = data.results
           ?.flatMap((result: any) => result.alternatives)
           .sort((a: any, b: any) => b.confidence - a.confidence)[0];
 
-        const recordedText = bestAlternative?.transcript || "인식 실패";
+        const recordedText = bestAlternative?.transcript || '인식 실패';
         setter(recordedText);
 
-        listSetter((prevList) => [
-          ...prevList,
-          { text: recordedText, uri: uri },
-        ]);
+        if (recordedText !== '인식 실패') {
+          const formattedText = extractInfoFromText(recordedText, type);
+          listSetter((prevList) => [...prevList, { text: formattedText, uri }]);
+        } else {
+          Alert.alert('알림', '음성 인식이 실패하여 저장되지 않았습니다.');
+        }
       }
     } catch (error) {
-      console.error("음성 인식 요청 실패", error);
-      Alert.alert(
-        "오류",
-        "음성 인식 중 문제가 발생했습니다. 다시 시도해 주세요."
-      );
+      console.error('음성 인식 요청 실패', error);
+      Alert.alert('오류', '음성 인식 중 문제가 발생했습니다.');
     } finally {
-      setIsProcessing(false); // 처리 중 상태 해제
+      setIsProcessing(false);
     }
   };
 
-  const handleSave = (
-    setter: React.Dispatch<React.SetStateAction<string>>,
-    listSetter: React.Dispatch<React.SetStateAction<RecordingItem[]>>,
-    text: string
-  ) => {
-    listSetter((prevList) => [...prevList, { text, uri: "" }]);
-    setter("");
-  };
-
-  const handleRetake = (
+  const handleRetake = async (
     setter: React.Dispatch<React.SetStateAction<string>>
   ) => {
-    setter("");
+    setter('');
+    setIsRecording(false);
+
+    // 현재 녹음 중지
+    if (recording) {
+      await recording.stopAndUnloadAsync();
+      setRecording(null);
+    }
+  };
+
+  const cancelModal = () => {
+    // 모달이 닫힐 때, 녹음 중이면 중단
+    if (recording) {
+      recording.stopAndUnloadAsync();
+      setRecording(null);
+      setIsRecording(false);
+    }
+  };
+
+  const openScheduleModal = () => {
+    setScheduleText('');
     setRecording(null);
+    setIsRecording(false);
+    setScheduleModalVisible(true);
+  };
+
+  const openMedicineModal = () => {
+    setMedicineText('');
+    setRecording(null);
+    setIsRecording(false);
+    setMedicineModalVisible(true);
+  };
+
+  const openMemoModal = () => {
+    setMemoText('');
+    setRecording(null);
+    setIsRecording(false);
+    setMemoModalVisible(true);
   };
 
   const playRecording = async (uri: string) => {
-    const { sound } = await Audio.Sound.createAsync({ uri });
-    await sound.playAsync();
-  };
+    try {
+      // 스피커 모드로 변경
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: false,
+        staysActiveInBackground: true,
+        playThroughEarpieceAndroid: false, // 안드로이드에서 스피커 사용
+      });
 
-  const confirmDeleteItem = (
-    item: RecordingItem,
-    listSetter: React.Dispatch<React.SetStateAction<RecordingItem[]>>
-  ) => {
-    setSelectedItem(item);
-    setSelectedListSetter(() => listSetter);
-    setDeleteModalVisible(true);
-  };
-
-  const deleteItem = () => {
-    if (selectedItem && selectedListSetter) {
-      selectedListSetter((prevList) =>
-        prevList.filter((item) => item !== selectedItem)
-      );
-      setDeleteModalVisible(false);
-      setSelectedItem(null);
+      const { sound } = await Audio.Sound.createAsync({ uri });
+      await sound.playAsync();
+    } catch (error) {
+      console.error('음성 재생 중 오류 발생:', error);
     }
   };
 
+  const renderRecordingList = (
+    header: string,
+    list: RecordingItem[],
+    listSetter: React.Dispatch<React.SetStateAction<RecordingItem[]>>,
+    type: 'schedule' | 'medicine' | 'memo'
+  ) => (
+    <>
+      <Text style={styles.listHeader}>{header}</Text>
+      {list.map((item, index) => (
+        <View key={index} style={styles.listItemContainer}>
+          <View style={styles.textContainer}>
+            <Text style={styles.listItem}>{item.text}</Text>
+          </View>
+          <View style={styles.listItemButtons}>
+            {item.uri && (
+              <TouchableOpacity onPress={() => playRecording(item.uri)}>
+                <MaterialIcons
+                  name="play-circle-outline"
+                  size={40}
+                  color="#4CAF50"
+                />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() =>
+                listSetter((prevList) => prevList.filter((_, i) => i !== index))
+              }
+            >
+              <MaterialIcons name="delete" size={40} color="#f44336" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </>
+  );
+
   return (
-    <View style={styles.container}>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.squareButton2}
-          onPress={() => setScheduleModalVisible(true)}
-        >
-          <Text style={styles.buttonText}>일정등록</Text>
+    <ScrollView style={styles.scrollContainer}>
+      <View style={styles.container}>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.squareButton2}
+            onPress={openScheduleModal}
+          >
+            <Text style={styles.buttonText}>일정등록</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.squareButton1}
+            onPress={openMedicineModal}
+          >
+            <Text style={styles.buttonText}>복용약등록</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.memoButton} onPress={openMemoModal}>
+          <Text style={styles.buttonText}>메모등록</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.squareButton1}
-          onPress={() => setMedicineModalVisible(true)}
+
+        {renderRecordingList(
+          '일정등록내역',
+          scheduleList,
+          setScheduleList,
+          'schedule'
+        )}
+        {renderRecordingList(
+          '복용약등록내역',
+          medicineList,
+          setMedicineList,
+          'medicine'
+        )}
+        {renderRecordingList('메모등록내역', memoList, setMemoList, 'memo')}
+
+        {/* 일정 등록 모달 */}
+        <Modal
+          isVisible={isScheduleModalVisible}
+          style={styles.modal}
+          onModalHide={cancelModal} // 모달 닫힐 때 녹음 중단 처리
         >
-          <Text style={styles.buttonText}>복용약등록</Text>
-        </TouchableOpacity>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {isRecording
+                ? '말이 끝나면 마이크를 한번 더 눌러주세요'
+                : '마이크를 누르고 일정을 말해주세요'}
+            </Text>
+            <TouchableOpacity
+              onPress={
+                isRecording
+                  ? () =>
+                      stopRecording(
+                        setScheduleText,
+                        setScheduleList,
+                        'schedule'
+                      )
+                  : () => startRecording(setScheduleText)
+              }
+              style={styles.voiceButton}
+            >
+              <MaterialIcons
+                name="keyboard-voice"
+                size={80}
+                color={isRecording ? 'red' : '#4CAF50'}
+              />
+            </TouchableOpacity>
+            <Text style={styles.transcriptionText}>{scheduleText}</Text>
+            <TouchableOpacity
+              style={styles.retakeButton}
+              onPress={() => handleRetake(setScheduleText)}
+            >
+              <Text style={styles.buttonText}>다시 말하기</Text>
+            </TouchableOpacity>
+            <View style={styles.bottomBar}>
+              <TouchableOpacity
+                style={[styles.bottomButton, styles.saveButton]}
+                onPress={() => setScheduleModalVisible(false)}
+              >
+                <Text style={styles.bottomButtonText}>저장</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.bottomButton, styles.cancelButton]}
+                onPress={() => setScheduleModalVisible(false)}
+              >
+                <Text style={styles.bottomButtonText}>취소</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* 복용약 등록 모달 */}
+        <Modal
+          isVisible={isMedicineModalVisible}
+          style={styles.modal}
+          onModalHide={cancelModal} // 모달 닫힐 때 녹음 중단 처리
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {isRecording
+                ? '말이 끝나면 마이크를 한번 더 눌러주세요'
+                : '마이크를 누르고 복용약 정보를 말해주세요'}
+            </Text>
+            <TouchableOpacity
+              onPress={
+                isRecording
+                  ? () =>
+                      stopRecording(
+                        setMedicineText,
+                        setMedicineList,
+                        'medicine'
+                      )
+                  : () => startRecording(setMedicineText)
+              }
+              style={styles.voiceButton}
+            >
+              <MaterialIcons
+                name="keyboard-voice"
+                size={80}
+                color={isRecording ? 'red' : '#4CAF50'}
+              />
+            </TouchableOpacity>
+            <Text style={styles.transcriptionText}>{medicineText}</Text>
+            <TouchableOpacity
+              style={styles.retakeButton}
+              onPress={() => handleRetake(setMedicineText)}
+            >
+              <Text style={styles.buttonText}>다시 말하기</Text>
+            </TouchableOpacity>
+            <View style={styles.bottomBar}>
+              <TouchableOpacity
+                style={[styles.bottomButton, styles.saveButton]}
+                onPress={() => setMedicineModalVisible(false)}
+              >
+                <Text style={styles.bottomButtonText}>저장</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.bottomButton, styles.cancelButton]}
+                onPress={() => setMedicineModalVisible(false)}
+              >
+                <Text style={styles.bottomButtonText}>취소</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* 메모 등록 모달 */}
+        <Modal
+          isVisible={isMemoModalVisible}
+          style={styles.modal}
+          onModalHide={cancelModal} // 모달 닫힐 때 녹음 중단 처리
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {isRecording
+                ? '말이 끝나면 마이크를 한번 더 눌러주세요'
+                : '마이크를 누르고 메모를 말해주세요'}
+            </Text>
+            <TouchableOpacity
+              onPress={
+                isRecording
+                  ? () => stopRecording(setMemoText, setMemoList, 'memo')
+                  : () => startRecording(setMemoText)
+              }
+              style={styles.voiceButton}
+            >
+              <MaterialIcons
+                name="keyboard-voice"
+                size={80}
+                color={isRecording ? 'red' : '#4CAF50'}
+              />
+            </TouchableOpacity>
+            <Text style={styles.transcriptionText}>{memoText}</Text>
+            <TouchableOpacity
+              style={styles.retakeButton}
+              onPress={() => handleRetake(setMemoText)}
+            >
+              <Text style={styles.buttonText}>다시 말하기</Text>
+            </TouchableOpacity>
+            <View style={styles.bottomBar}>
+              <TouchableOpacity
+                style={[styles.bottomButton, styles.saveButton]}
+                onPress={() => setMemoModalVisible(false)}
+              >
+                <Text style={styles.bottomButtonText}>저장</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.bottomButton, styles.cancelButton]}
+                onPress={() => setMemoModalVisible(false)}
+              >
+                <Text style={styles.bottomButtonText}>취소</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
-
-      <Text style={styles.listHeader}>일정등록내역</Text>
-      <FlatList
-        data={scheduleList}
-        renderItem={({ item }) => (
-          <View style={styles.listItemContainer}>
-            <Text style={styles.listItem}>{item.text}</Text>
-            <View style={styles.listItemButtons}>
-              {item.uri ? (
-                <TouchableOpacity onPress={() => playRecording(item.uri)}>
-                  <MaterialIcons
-                    name="play-circle-outline"
-                    size={30}
-                    color="#4CAF50"
-                  />
-                </TouchableOpacity>
-              ) : null}
-              <TouchableOpacity
-                onPress={() => confirmDeleteItem(item, setScheduleList)}
-              >
-                <MaterialIcons name="delete" size={30} color="#f44336" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        keyExtractor={(item, index) => index.toString()}
-      />
-
-      <Text style={styles.listHeader}>복용약등록내역</Text>
-      <FlatList
-        data={medicineList}
-        renderItem={({ item }) => (
-          <View style={styles.listItemContainer}>
-            <Text style={styles.listItem}>{item.text}</Text>
-            <View style={styles.listItemButtons}>
-              {item.uri ? (
-                <TouchableOpacity onPress={() => playRecording(item.uri)}>
-                  <MaterialIcons
-                    name="play-circle-outline"
-                    size={30}
-                    color="#4CAF50"
-                  />
-                </TouchableOpacity>
-              ) : null}
-              <TouchableOpacity
-                onPress={() => confirmDeleteItem(item, setMedicineList)}
-              >
-                <MaterialIcons name="delete" size={30} color="#f44336" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        keyExtractor={(item, index) => index.toString()}
-      />
-
-      <Modal isVisible={isScheduleModalVisible} style={styles.modal}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>일정을 말해주세요</Text>
-          <TouchableOpacity
-            onPress={
-              recording
-                ? () => stopRecording(setScheduleText, setScheduleList)
-                : () => startRecording(setScheduleText)
-            }
-            style={styles.voiceButton}
-          >
-            <MaterialIcons name="keyboard-voice" size={80} color="#4CAF50" />
-          </TouchableOpacity>
-          <Text style={styles.transcriptionText}>{scheduleText}</Text>
-          <TouchableOpacity
-            style={styles.retakeButton}
-            onPress={() => handleRetake(setScheduleText)}
-          >
-            <Text style={styles.buttonText}>다시 말하기</Text>
-          </TouchableOpacity>
-          <View style={styles.bottomBar}>
-            <TouchableOpacity
-              style={[styles.bottomButton, styles.saveButton]}
-              onPress={() => {
-                handleSave(setScheduleText, setScheduleList, scheduleText);
-                setScheduleModalVisible(false);
-              }}
-            >
-              <Text style={styles.bottomButtonText}>저장</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.bottomButton, styles.cancelButton]}
-              onPress={() => setScheduleModalVisible(false)}
-            >
-              <Text style={styles.bottomButtonText}>취소</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal isVisible={isMedicineModalVisible} style={styles.modal}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>복용약 정보를 말해주세요</Text>
-          <TouchableOpacity
-            onPress={
-              recording
-                ? () => stopRecording(setMedicineText, setMedicineList)
-                : () => startRecording(setMedicineText)
-            }
-            style={styles.voiceButton}
-          >
-            <MaterialIcons name="keyboard-voice" size={80} color="#4CAF50" />
-          </TouchableOpacity>
-          <Text style={styles.transcriptionText}>{medicineText}</Text>
-          <TouchableOpacity
-            style={styles.retakeButton}
-            onPress={() => handleRetake(setMedicineText)}
-          >
-            <Text style={styles.buttonText}>다시 말하기</Text>
-          </TouchableOpacity>
-          <View style={styles.bottomBar}>
-            <TouchableOpacity
-              style={[styles.bottomButton, styles.saveButton]}
-              onPress={() => {
-                handleSave(setMedicineText, setMedicineList, medicineText);
-                setMedicineModalVisible(false);
-              }}
-            >
-              <Text style={styles.bottomButtonText}>저장</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.bottomButton, styles.cancelButton]}
-              onPress={() => setMedicineModalVisible(false)}
-            >
-              <Text style={styles.bottomButtonText}>취소</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal isVisible={isDeleteModalVisible}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>정말로 삭제하시겠습니까?</Text>
-          <View style={styles.bottomBar}>
-            <TouchableOpacity
-              style={[styles.bottomButton, styles.saveButton]}
-              onPress={deleteItem}
-            >
-              <Text style={styles.bottomButtonText}>삭제</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.bottomButton, styles.cancelButton]}
-              onPress={() => setDeleteModalVisible(false)}
-            >
-              <Text style={styles.bottomButtonText}>취소</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     padding: 16,
     paddingTop: 60,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
   },
   buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 20,
   },
   squareButton1: {
     flex: 1,
     height: 200,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#49277f",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#49277f',
     borderRadius: 8,
     marginHorizontal: 1,
   },
   squareButton2: {
     flex: 1,
     height: 200,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#ff5252",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ff5252',
     borderRadius: 8,
     marginHorizontal: 1,
   },
+  memoButton: {
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFA500',
+    borderRadius: 8,
+    marginTop: -10,
+    marginBottom: 10,
+  },
   buttonText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 42,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   listHeader: {
     fontSize: 35,
-    fontWeight: "bold",
-    marginBottom: 10,
+    fontWeight: 'bold',
+    marginVertical: 20,
   },
   listItemContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 5,
+  },
+  textContainer: {
+    flex: 1,
+    marginRight: 20,
   },
   listItem: {
     fontSize: 30,
+    flexWrap: 'wrap',
   },
   listItemButtons: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   modal: {
-    justifyContent: "center",
-    margin: 0, // 화면 전체를 사용하도록 설정
+    justifyContent: 'center',
+    margin: 0,
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: 'white',
     padding: 22,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: 8,
     margin: 20,
   },
   modalTitle: {
-    fontSize: 30, // 글씨 크기를 30으로 설정
-    fontWeight: "bold",
+    fontSize: 30,
+    fontWeight: 'bold',
     marginBottom: 20,
   },
   voiceButton: {
-    marginVertical: 30, // 음성 인식 버튼의 위아래 간격 설정
+    marginVertical: 30,
   },
   transcriptionText: {
-    fontSize: 30, // 변환된 텍스트 크기 설정
-    color: "#000",
+    fontSize: 30,
+    color: '#000',
     marginTop: 20,
-    textAlign: "center",
+    textAlign: 'center',
   },
   bottomBar: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: "100%",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "#ccc",
+    borderTopColor: '#ccc',
   },
   bottomButton: {
     flex: 1,
-    alignItems: "center",
+    alignItems: 'center',
     paddingVertical: 15,
-    backgroundColor: "#fff", // 버튼 배경을 흰색으로 설정
+    backgroundColor: '#fff',
   },
   bottomButtonText: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#4CAF50", // 버튼 텍스트 색상을 지정
+    fontWeight: 'bold',
+    color: '#4CAF50',
   },
   saveButton: {
-    backgroundColor: "#fff", // 저장 버튼 배경을 흰색으로 설정
+    backgroundColor: '#fff',
   },
   cancelButton: {
-    backgroundColor: "#fff", // 취소 버튼 배경을 흰색으로 설정
+    backgroundColor: '#fff',
   },
   retakeButton: {
-    backgroundColor: "#FFC107",
+    backgroundColor: '#FFC107',
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 8,

@@ -22,15 +22,15 @@
 //   children: string;
 //   fontSize: number;
 //   versionText?: string;
-//   onPress?: () => void; // onPress를 선택적으로 받도록 변경
+//   onPress?: () => void;
 // }) => {
 //   return (
 //     <View style={styles.menuButtonContainer}>
 //       <TouchableOpacity
 //         style={styles.menuButton}
-//         onPress={onPress} // onPress가 전달되지 않으면 아무 동작도 하지 않음
+//         onPress={onPress}
 //         accessibilityLabel={children}
-//         disabled={!onPress} // onPress가 없으면 버튼을 비활성화
+//         disabled={!onPress}
 //       >
 //         <View style={styles.menuButtonContent}>
 //           <Text style={[styles.sectionText, { fontSize }]}>{children}</Text>
@@ -74,8 +74,8 @@
 //   const [pushNotificationsEnabled, setPushNotificationsEnabled] =
 //     useState(false);
 //   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
-//   const [fontSize, setFontSize] = useState(16); // 기본 글씨 크기
-//   const [modalVisible, setModalVisible] = useState(false); // 모달 표시 상태
+//   const [fontSize, setFontSize] = useState(16);
+//   const [modalVisible, setModalVisible] = useState(false);
 
 //   const showFontSizeModal = () => {
 //     setModalVisible(true);
@@ -91,8 +91,8 @@
 //   };
 
 //   return (
-//     <ScrollView contentContainerStyle={styles.scrollViewContent}>
-//       <SafeAreaView>
+//     <SafeAreaView style={styles.container}>
+//       <ScrollView contentContainerStyle={styles.scrollViewContent}>
 //         <View style={styles.container}>
 //           <TouchableOpacity
 //             style={styles.myProfile}
@@ -141,7 +141,7 @@
 //               <MenuButton
 //                 fontSize={fontSize}
 //                 versionText="1.0.0 v"
-//                 onPress={undefined} // 앱 버전 버튼의 onPress를 undefined로 설정하여 팝업이 뜨지 않게 함
+//                 onPress={undefined}
 //               >
 //                 앱 버전
 //               </MenuButton>
@@ -201,8 +201,8 @@
 //             </View>
 //           </View>
 //         </Modal>
-//       </SafeAreaView>
-//     </ScrollView>
+//       </ScrollView>
+//     </SafeAreaView>
 //   );
 // }
 
@@ -210,10 +210,10 @@
 //   container: {
 //     flex: 1,
 //     backgroundColor: '#fff',
-//     padding: 20,
 //   },
 //   scrollViewContent: {
 //     flexGrow: 1,
+//     paddingBottom: 20, // 아래쪽에 추가 패딩을 주어 검은색 배경이 보이지 않도록 설정
 //   },
 //   myProfile: {
 //     flexDirection: 'row',
@@ -307,8 +307,14 @@
 //     marginRight: 25,
 //   },
 // });
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import React, { useState } from "react";
+
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { NavigationContainer } from '@react-navigation/native';
+import {
+  createStackNavigator,
+  StackNavigationProp,
+} from '@react-navigation/stack';
+import React, { useState } from 'react';
 import {
   Alert,
   Button,
@@ -317,69 +323,72 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const MenuButton = ({
-  children,
-  fontSize,
-  versionText,
-  onPress,
-}: {
-  children: string;
-  fontSize: number;
-  versionText?: string;
-  onPress?: () => void;
-}) => {
+// Define types for navigation stack
+type RootStackParamList = {
+  MyPage: undefined;
+  Inquiry: undefined;
+};
+
+type MyPageNavigationProp = StackNavigationProp<RootStackParamList, 'MyPage'>;
+type InquiryPageNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'Inquiry'
+>;
+
+type MyPageProps = {
+  navigation: MyPageNavigationProp;
+};
+
+type InquiryPageProps = {
+  navigation: InquiryPageNavigationProp;
+};
+
+// 문의하기 페이지 컴포넌트
+function InquiryPage({ navigation }: InquiryPageProps) {
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+
+  const handleSendPress = () => {
+    Alert.alert('문의하기 전송', `제목: ${title}\n내용: ${content}`);
+  };
+
   return (
-    <View style={styles.menuButtonContainer}>
+    <SafeAreaView style={styles.container}>
       <TouchableOpacity
-        style={styles.menuButton}
-        onPress={onPress}
-        accessibilityLabel={children}
-        disabled={!onPress}
+        onPress={() => navigation.goBack()}
+        style={styles.backButton}
       >
-        <View style={styles.menuButtonContent}>
-          <Text style={[styles.sectionText, { fontSize }]}>{children}</Text>
-          {versionText && (
-            <Text style={[styles.versionText, { fontSize: fontSize - 2 }]}>
-              {versionText}
-            </Text>
-          )}
-        </View>
+        <Text style={styles.backButtonText}>뒤로 가기</Text>
       </TouchableOpacity>
-    </View>
-  );
-};
 
-const SettingOption = ({
-  label,
-  value,
-  onValueChange,
-  fontSize,
-}: {
-  label: string;
-  value: boolean;
-  onValueChange: (value: boolean) => void;
-  fontSize: number;
-}) => {
-  return (
-    <View style={styles.settingOption}>
-      <Text style={[styles.sectionText, { fontSize }]}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: "#767577", true: "#81b0ff" }}
-        thumbColor={value ? "#f5dd4b" : "#f4f3f4"}
-        accessibilityLabel={label}
-      />
-    </View>
+      <View style={styles.inquiryForm}>
+        <TextInput
+          style={styles.input}
+          placeholder="제목을 입력하세요"
+          value={title}
+          onChangeText={setTitle}
+        />
+        <TextInput
+          style={[styles.input, { height: 100 }]}
+          placeholder="내용을 입력하세요"
+          value={content}
+          onChangeText={setContent}
+          multiline
+        />
+        <Button title="보내기" onPress={handleSendPress} />
+      </View>
+    </SafeAreaView>
   );
-};
+}
 
-export default function MyPage() {
+// MyPage 컴포넌트
+function MyPage({ navigation }: MyPageProps) {
   const [pushNotificationsEnabled, setPushNotificationsEnabled] =
     useState(false);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
@@ -396,7 +405,7 @@ export default function MyPage() {
   };
 
   const handleProfilePress = () => {
-    Alert.alert("로그인 버튼 클릭됨");
+    Alert.alert('로그인 버튼 클릭됨');
   };
 
   return (
@@ -457,35 +466,23 @@ export default function MyPage() {
               <View style={styles.borderLine} />
               <MenuButton
                 fontSize={fontSize}
-                onPress={() => Alert.alert("문의하기 버튼 눌림")}
+                onPress={() => navigation.navigate('Inquiry')}
               >
                 문의하기
               </MenuButton>
               <View style={styles.borderLine} />
               <MenuButton
                 fontSize={fontSize}
-                onPress={() => Alert.alert("공지사항 버튼 눌림")}
+                onPress={() => Alert.alert('공지사항 버튼 눌림')}
               >
                 공지사항
               </MenuButton>
               <View style={styles.borderLine} />
               <MenuButton
                 fontSize={fontSize}
-                onPress={() => Alert.alert("서비스 이용 약관 버튼 눌림")}
+                onPress={() => Alert.alert('서비스 이용 약관 버튼 눌림')}
               >
                 서비스 이용 약관
-              </MenuButton>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { fontSize }]}>기타</Text>
-            <View style={styles.boxWithBorder}>
-              <MenuButton
-                fontSize={fontSize}
-                onPress={() => Alert.alert("계정 탈퇴 버튼 눌림")}
-              >
-                계정 탈퇴
               </MenuButton>
             </View>
           </View>
@@ -515,104 +512,207 @@ export default function MyPage() {
   );
 }
 
+// MenuButton 컴포넌트
+const MenuButton = ({
+  children,
+  fontSize,
+  versionText,
+  onPress,
+}: {
+  children: string;
+  fontSize: number;
+  versionText?: string;
+  onPress?: () => void;
+}) => {
+  return (
+    <View style={styles.menuButtonContainer}>
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={onPress}
+        accessibilityLabel={children}
+        disabled={!onPress}
+      >
+        <View style={styles.menuButtonContent}>
+          <Text style={[styles.sectionText, { fontSize }]}>{children}</Text>
+          {versionText && (
+            <Text style={[styles.versionText, { fontSize: fontSize - 2 }]}>
+              {versionText}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// SettingOption 컴포넌트
+const SettingOption = ({
+  label,
+  value,
+  onValueChange,
+  fontSize,
+}: {
+  label: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+  fontSize: number;
+}) => {
+  return (
+    <View style={styles.settingOption}>
+      <Text style={[styles.sectionText, { fontSize }]}>{label}</Text>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: '#767577', true: '#81b0ff' }}
+        thumbColor={value ? '#f5dd4b' : '#f4f3f4'}
+        accessibilityLabel={label}
+      />
+    </View>
+  );
+};
+
+// 스택 네비게이션 설정
+const Stack = createStackNavigator();
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="MyPage">
+        <Stack.Screen
+          name="MyPage"
+          component={MyPage}
+          options={{ title: '설정' }}
+        />
+        <Stack.Screen
+          name="Inquiry"
+          component={InquiryPage}
+          options={{ title: '문의하기' }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+// 스타일
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
   },
   scrollViewContent: {
     flexGrow: 1,
-    paddingBottom: 20, // 아래쪽에 추가 패딩을 주어 검은색 배경이 보이지 않도록 설정
+    paddingBottom: 20,
   },
   myProfile: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 7,
     gap: 10,
     borderWidth: 2,
     borderRadius: 130,
-    borderColor: "#cee3f6",
-    backgroundColor: "#eff5fb",
+    borderColor: '#cee3f6',
+    backgroundColor: '#eff5fb',
     marginBottom: 40,
     marginTop: 20,
-    justifyContent: "flex-start",
+    justifyContent: 'flex-start',
   },
   loginText: {
     fontSize: 16,
-    color: "#444",
-    fontWeight: "600",
+    color: '#444',
+    fontWeight: '600',
   },
   section: {
-    width: "95%",
-    alignSelf: "center",
+    width: '95%',
+    alignSelf: 'center',
     marginBottom: 30,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: '700',
     marginBottom: 20,
-    color: "#777",
+    color: '#777',
   },
   sectionText: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#444",
-    textAlign: "left",
+    fontWeight: '600',
+    color: '#444',
+    textAlign: 'left',
     marginLeft: 12,
   },
   menuButtonContainer: {
-    width: "100%",
+    width: '100%',
     marginBottom: 10,
   },
   menuButton: {
     paddingVertical: 10,
   },
   menuButtonContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   borderLine: {
-    width: "98%",
+    width: '98%',
     height: 0.5,
-    backgroundColor: "#ccc",
-    alignSelf: "center",
+    backgroundColor: '#ccc',
+    alignSelf: 'center',
     marginVertical: 5,
   },
   boxWithBorder: {
-    backgroundColor: "#f8f8f8",
+    backgroundColor: '#f8f8f8',
     borderRadius: 10,
     padding: 7,
     borderWidth: 0,
   },
   settingOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 10,
     height: 50,
   },
+  backButton: {
+    padding: 10,
+    backgroundColor: '#eee',
+    marginBottom: 20,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  inquiryForm: {
+    padding: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 20,
+    fontSize: 16,
+    width: '100%',
+  },
   modalContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     padding: 25,
     borderRadius: 10,
-    width: "80%",
-    alignItems: "center",
+    width: '80%',
+    alignItems: 'center',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "500",
+    fontWeight: '500',
     marginBottom: 30,
   },
   versionText: {
-    color: "#888",
-    fontWeight: "400",
+    color: '#888',
+    fontWeight: '400',
     marginRight: 25,
   },
 });
