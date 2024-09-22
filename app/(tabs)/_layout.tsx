@@ -1,8 +1,8 @@
-import { Tabs } from "expo-router";
+import { Tabs } from 'expo-router';
 
-import { TabBarIcon } from "@/components/navigation/TabBarIcon";
-import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { TabBarIcon } from '@/components/navigation/TabBarIcon';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -10,17 +10,17 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
-          title: "홈",
+          title: '홈',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
-              name={focused ? "home" : "home-outline"}
+              name={focused ? 'home' : 'home-outline'}
               color={color}
             />
           ),
@@ -29,10 +29,34 @@ export default function TabLayout() {
       <Tabs.Screen
         name="calendar"
         options={{
-          title: "일정",
+          title: '일정',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
-              name={focused ? "calendar-number" : "calendar-number-outline"}
+              name={focused ? 'calendar-number' : 'calendar-number-outline'}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="pilladd"
+        options={{
+          title: '복용약',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? 'settings' : 'settings-outline'}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="memo"
+        options={{
+          title: '일정',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? 'settings' : 'settings-outline'}
               color={color}
             />
           ),
@@ -41,19 +65,43 @@ export default function TabLayout() {
       <Tabs.Screen
         name="map"
         options={{
-          title: "지도",
+          title: '지도',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? "map" : "map-outline"} color={color} />
+            <TabBarIcon name={focused ? 'map' : 'map-outline'} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="mymenu"
         options={{
-          title: "설정",
+          title: '설정',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
-              name={focused ? "settings" : "settings-outline"}
+              name={focused ? 'settings' : 'settings-outline'}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="ask"
+        options={{
+          title: '문의하기',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? 'settings' : 'settings-outline'}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="TermsOfService"
+        options={{
+          title: '서비스이용약관',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? 'settings' : 'settings-outline'}
               color={color}
             />
           ),

@@ -1,365 +1,485 @@
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import * as Location from "expo-location";
-import React, { useEffect, useState } from "react";
+import axios from 'axios';
+import CheckBox from 'expo-checkbox';
+import * as Location from 'expo-location';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
-  FlatList,
+  Image,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
-} from "react-native";
+} from 'react-native';
 
 interface Weather {
-  temp: number; // 현재 온도
-  temp_min: number; // 최저 온도
-  temp_max: number; // 최고 온도
-  condition: string; // 날씨 상태 (예: "Clear", "Rain")
-  location: string; // 위치 정보 (도시, 국가)
-  pm10: number; // 미세먼지 수치
-  pm2_5: number; // 초미세먼지 수치
-  date: string; // 현재 날짜
+  temp: number;
+  temp_min: number;
+  temp_max: number;
+  condition: string;
+  location: string;
+  pm10: number;
+  date: string;
+}
+
+interface Task {
+  id: number;
+  title: string;
+  isChecked: boolean;
+  date: string;
 }
 
 interface Medication {
-  id: number; // 복용약 ID
-  name: string; // 복용약 이름
-  time: string; // 복용 시간
+  id: number;
+  name: string;
+  isChecked: boolean;
 }
 
-interface Schedule {
-  id: number; // 일정 ID
-  title: string; // 일정 제목
-  time: string; // 일정 시간
+interface Notification {
+  id: number;
+  message: string;
+  isChecked: boolean;
 }
 
-const API_KEY = "724e4827102510377b55ebc097c13897"; // OpenWeatherMap API 키
-const MEDICATION_KEY = "@medications"; // AsyncStorage에서 복용약 데이터를 저장하는 키
-const SCHEDULE_KEY = "@schedules"; // AsyncStorage에서 일정 데이터를 저장하는 키
-
-const icons: { [key: string]: keyof typeof Ionicons.glyphMap } = {
-  // 날씨 상태에 따라 아이콘 매핑
-  Clouds: "cloud",
-  Clear: "sunny",
-  Snow: "snow",
-  Rain: "rainy",
-  Drizzle: "rainy-outline",
-  Thunderstorm: "thunderstorm",
-  Mist: "cloud-outline",
-  Smoke: "cloud-outline",
-  Haze: "cloud-outline",
-  Dust: "cloud-outline",
-  Fog: "cloud-outline",
-  Sand: "cloud-outline",
-  Ash: "cloud-outline",
-  Squall: "cloud-outline",
-  Tornado: "cloud-outline",
-};
+const API_KEY = '724e4827102510377b55ebc097c13897';
 
 const WeatherScreen: React.FC = () => {
-  const [weather, setWeather] = useState<Weather>({
-    temp: 0,
-    temp_min: 0,
-    temp_max: 0,
-    condition: "",
-    location: "",
-    pm10: 0,
-    pm2_5: 0,
-    date: "",
-  });
+  const [weather, setWeather] = useState<Weather | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [imageIndex, setImageIndex] = useState(0);
 
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  // 로딩 시 보여줄 이미지 배열
+  const images = [
+    require('../../assets/images/weather/sunny.png'), // 해 이미지
+    require('../../assets/images/weather/rainy.png'), // 비 이미지
+    require('../../assets/images/weather/snowy.png'), // 눈 이미지
+  ];
+
+  const [tasks, setTasks] = useState<Task[]>([
+    { id: 1, title: '병원가기', isChecked: true, date: '2024-09-30' },
+    { id: 2, title: '아들과 전화', isChecked: false, date: '2024-09-30' },
+    { id: 3, title: '장보기', isChecked: false, date: '2024-10-01' },
+  ]);
+
+  const [medications, setMedications] = useState<Medication[]>([
+    { id: 1, name: '종합영양제', isChecked: false },
+    { id: 2, name: '혈압 약', isChecked: true },
+    { id: 3, name: '고지혈증 약', isChecked: false },
+  ]);
+
+  const [notifications, setNotifications] = useState<Notification[]>([
+    { id: 1, message: '가스점검: 불을 꼭 꺼주세요!', isChecked: true },
+    { id: 2, message: '병원 방문 시 주민등록증 챙기기', isChecked: false },
+  ]);
 
   useEffect(() => {
-    // 앱이 로드될 때 실행되는 함수
     const fetchWeather = async () => {
       try {
-        await getLocation(); // 위치를 가져와서 날씨 데이터를 불러옴
+        setLoading(true);
+
+        let latitude: number;
+        let longitude: number;
+        let formattedLocation: string = '알 수 없음';
+
+        if (Platform.OS === 'web') {
+          if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                latitude = position.coords.latitude;
+                longitude = position.coords.longitude;
+
+                const reverseGeocode = await axios.get(
+                  `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ko`
+                );
+                formattedLocation = `${reverseGeocode.data.city} ${reverseGeocode.data.locality}`;
+                fetchWeatherData(latitude, longitude, formattedLocation);
+              },
+              (error) => {
+                console.error('Error getting location in web:', error);
+                Alert.alert(
+                  '위치 권한 요청',
+                  '위치 정보를 가져올 수 없습니다.'
+                );
+                setLoading(false);
+              }
+            );
+          } else {
+            Alert.alert(
+              '지원되지 않음',
+              '이 브라우저는 위치 정보를 지원하지 않습니다.'
+            );
+            setLoading(false);
+          }
+        } else {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('위치 권한 요청', '위치 권한이 거부되었습니다.');
+            setLoading(false);
+            return;
+          }
+
+          const locationData = await Location.getCurrentPositionAsync();
+          latitude = locationData.coords.latitude;
+          longitude = locationData.coords.longitude;
+
+          const reverseGeocode = await Location.reverseGeocodeAsync({
+            latitude,
+            longitude,
+          });
+
+          const address = reverseGeocode[0];
+          const city = address.city || address.region;
+          const district = address.district;
+          formattedLocation = `${city} ${district}`;
+
+          fetchWeatherData(latitude, longitude, formattedLocation);
+        }
       } catch (error) {
         Alert.alert(
-          "날씨 데이터를 불러오지 못했습니다.",
-          "잠시 후 다시 시도해주세요."
+          '날씨 정보를 불러올 수 없습니다.',
+          '잠시 후 다시 시도해주세요.'
         );
-        console.error("Weather fetch error:", error);
+        console.error(error);
+        setLoading(false);
       }
     };
 
-    const loadMedications = async () => {
-      // 복용약 데이터를 AsyncStorage에서 불러옴
+    const fetchWeatherData = async (
+      latitude: number,
+      longitude: number,
+      location: string
+    ) => {
       try {
-        const jsonValue = await AsyncStorage.getItem(MEDICATION_KEY);
-        const loadedMedications =
-          jsonValue != null ? JSON.parse(jsonValue) : {};
-        const today = new Date().toISOString().split("T")[0];
-        setMedications(loadedMedications[today] || []);
-      } catch (e) {
-        Alert.alert(
-          "복용약을 불러오지 못했습니다.",
-          "잠시 후 다시 시도해주세요."
+        const weatherResult = await axios.get(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
         );
-        console.error("Failed to load medications from storage:", e);
+
+        const temp = Math.round(weatherResult.data.main.temp);
+        const temp_min = Math.round(weatherResult.data.main.temp_min);
+        const temp_max = weatherResult.data.main.temp_max
+          ? Math.round(weatherResult.data.main.temp_max)
+          : 0;
+        const condition = weatherResult.data.weather[0].main;
+
+        const pollutionResult = await axios.get(
+          `http://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`
+        );
+        const pm10 = pollutionResult.data.list[0]?.components.pm10 ?? 0;
+
+        const date = new Date().toLocaleDateString('ko-KR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          weekday: 'long',
+        });
+
+        setWeather({
+          temp,
+          temp_min,
+          temp_max,
+          condition,
+          location,
+          pm10,
+          date,
+        });
+      } catch (error) {
+        Alert.alert(
+          '날씨 정보를 불러올 수 없습니다.',
+          '잠시 후 다시 시도해주세요.'
+        );
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    const loadSchedules = async () => {
-      // 일정을 AsyncStorage에서 불러옴
-      try {
-        const jsonValue = await AsyncStorage.getItem(SCHEDULE_KEY);
-        const loadedSchedules = jsonValue != null ? JSON.parse(jsonValue) : {};
-        const today = new Date().toISOString().split("T")[0];
-        setSchedules(loadedSchedules[today] || []);
-      } catch (e) {
-        Alert.alert(
-          "일정을 불러오지 못했습니다.",
-          "잠시 후 다시 시도해주세요."
-        );
-        console.error("Failed to load schedules from storage:", e);
-      }
-    };
-
-    fetchWeather(); // 날씨 정보 불러오기
-    loadMedications(); // 복용약 정보 불러오기
-    loadSchedules(); // 일정 정보 불러오기
+    fetchWeather();
   }, []);
 
-  const getLocation = async () => {
-    // 위치 권한 요청 및 현재 위치를 기반으로 날씨 정보 가져오기
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("위치 권한 요청", "위치 권한이 거부되었습니다.");
-        return;
-      }
+  useEffect(() => {
+    // 3초마다 이미지가 변경되도록 설정
+    const interval = setInterval(() => {
+      setImageIndex((prevIndex) => (prevIndex + 1) % images.length);
+    }, 3000); // 3초마다 변경
 
-      const locationData = await Location.getCurrentPositionAsync();
-      const latitude = locationData.coords.latitude;
-      const longitude = locationData.coords.longitude;
+    return () => clearInterval(interval); // 컴포넌트 언마운트 시 인터벌 클리어
+  }, []);
 
-      // 현재 위치를 기반으로 날씨 정보 불러오기
-      const weatherResult = await axios.get(
-        `http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
-      );
-
-      const temp = roundTemperature(weatherResult.data.main.temp); // 온도 반올림
-      const condition = weatherResult.data.weather[0].main; // 날씨 상태
-
-      // 예보 데이터를 통해 최저/최고 온도 계산
-      const forecastResult = await axios.get(
-        `http://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
-      );
-
-      const { minTemp, maxTemp } = calculateMinMaxTemp(forecastResult.data);
-
-      // 위치 이름 불러오기
-      const locationResult = await axios.get(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
-      );
-
-      const address = locationResult.data.address;
-      const city =
-        address.city ||
-        address.town ||
-        address.village ||
-        address.state_district ||
-        "";
-      const country = "대한민국";
-      const location = `${city}, ${country}`;
-
-      // 대기오염 정보 불러오기
-      const pollutionResult = await axios.get(
-        `http://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`
-      );
-
-      const pm10 = pollutionResult.data.list[0].components.pm10; // 미세먼지 농도
-      const pm2_5 = pollutionResult.data.list[0].components.pm2_5; // 초미세먼지 농도
-
-      const date = new Date().toLocaleDateString("ko-KR", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        weekday: "long",
-      });
-
-      // 상태 업데이트
-      setWeather({
-        temp,
-        temp_min: minTemp,
-        temp_max: maxTemp,
-        condition,
-        location,
-        pm10,
-        pm2_5,
-        date,
-      });
-    } catch (error) {
-      Alert.alert("위치를 찾을 수가 없습니다.", "위치를 동의해주세요!");
-      console.error("Location or Weather fetch error:", error);
+  const getAirQualityLevel = (pm10: number): string => {
+    if (pm10 <= 15) {
+      return '좋음';
+    } else if (pm10 <= 35) {
+      return '보통';
+    } else if (pm10 <= 75) {
+      return '나쁨';
+    } else {
+      return '매우 나쁨';
     }
   };
 
-  // 온도 반올림 함수
-  const roundTemperature = (temp: number) => {
-    const roundedTemp = Math.floor(temp);
-    if (temp - roundedTemp >= 0.5) {
-      return Math.ceil(temp);
+  const getAirQualityColor = (pm10: number): string => {
+    if (pm10 <= 15) {
+      return 'blue';
+    } else if (pm10 <= 35) {
+      return 'green';
+    } else {
+      return 'red';
     }
-    return roundedTemp;
   };
 
-  // 예보 데이터에서 최저/최고 온도 계산
-  const calculateMinMaxTemp = (forecastData: any) => {
-    let minTemp = Number.MAX_VALUE;
-    let maxTemp = Number.MIN_VALUE;
-
-    forecastData.list.forEach((item: any) => {
-      const temp = item.main.temp;
-      if (temp < minTemp) {
-        minTemp = temp;
-      }
-      if (temp > maxTemp) {
-        maxTemp = temp;
-      }
-    });
-
-    return {
-      minTemp: roundTemperature(minTemp),
-      maxTemp: roundTemperature(maxTemp),
-    };
-  };
-
-  // 미세먼지 농도에 따른 메시지 생성
-  const getAirQualityLevel = (pm: number) => {
-    if (pm <= 30) return "좋음";
-    if (pm <= 80) return "보통";
-    return "나쁨";
-  };
-
-  const getAirQualityMessage = (pm10: number) => {
-    const pm10Level = getAirQualityLevel(pm10);
-    let message = "";
-
-    if (pm10Level === "나쁨") {
-      message = "미세먼지 농도가 높습니다. 마스크를 착용하세요! 😷";
+  const getWeatherIcon = (condition: string) => {
+    switch (condition) {
+      case 'Clouds':
+        return require('../../assets/images/weather/cloudy.png'); // 로컬 이미지 경로
+      case 'Clear':
+        return require('../../assets/images/weather/sunny.png'); // 로컬 이미지 경로
+      case 'Rain':
+        return require('../../assets/images/weather/rainy.png'); // 로컬 이미지 경로
+      case 'Snow':
+        return require('../../assets/images/weather/snowy.png'); // 로컬 이미지 경로
+      default:
+        return null; // 디폴트 이미지는 없음
     }
-
-    return { pm10Level, message };
   };
 
-  // 날씨에 따른 준비물 메시지 생성
-  const getWeatherPreparationMessage = (condition: string, temp: number) => {
-    let preparationMessage = "";
-
-    if (condition.includes("Rain")) {
-      preparationMessage = "우산을 챙기세요! ☔";
-    } else if (temp >= 35) {
-      preparationMessage = "외출을 자제해주세요! ☀️";
-    } else if (condition.includes("Snow")) {
-      preparationMessage = "따뜻한 옷을 입으세요! 🧥";
+  const getWeatherWarningMessage = (): string => {
+    if (weather?.condition === 'Rain') {
+      return '비가 오고 있으니 우산을 챙기세요!';
     }
-
-    return preparationMessage;
+    if (weather?.pm10 !== undefined && weather.pm10 > 800) {
+      return '황사로 인해 미세먼지가 계속 지속될 것으로 예상됩니다. 마스크를 착용하세요!';
+    }
+    if (weather?.temp_max !== undefined && weather.temp_max >= 33) {
+      return '온도가 너무 높으니 외출을 자제하세요!';
+    }
+    if (
+      weather?.condition === 'Snow' &&
+      weather?.temp_max !== undefined &&
+      weather.temp_max <= 0
+    ) {
+      return '폭설이 예상됩니다. 24시간 동안 20cm 이상 쌓일 수 있으니 조심하세요!';
+    }
+    return '';
   };
 
-  const { pm10Level, message } = getAirQualityMessage(weather.pm10); // 미세먼지 관련 메시지
-  const preparationMessage = getWeatherPreparationMessage(
-    weather.condition,
-    weather.temp
-  ); // 날씨 관련 메시지
+  const toggleTaskChecked = (id: number) => {
+    setTasks(
+      tasks.map((task) =>
+        task.id === id ? { ...task, isChecked: !task.isChecked } : task
+      )
+    );
+  };
 
-  // 알림 사항 정의 (고정된 목록)
-  const alerts = [
-    { id: 1, task: "가스 점검하기 🔥" },
-    { id: 2, task: "불끄기 확인하기 💡" },
-    { id: 3, task: "병원 갈 때 주민증 챙기기 🪪" },
-  ];
+  const toggleMedicationChecked = (id: number) => {
+    setMedications(
+      medications.map((med) =>
+        med.id === id ? { ...med, isChecked: !med.isChecked } : med
+      )
+    );
+  };
+
+  const toggleNotificationChecked = (id: number) => {
+    setNotifications(
+      notifications.map((notif) =>
+        notif.id === id ? { ...notif, isChecked: !notif.isChecked } : notif
+      )
+    );
+  };
+
+  const getPreparationMessage = (): string => {
+    if (weather?.condition === 'Rain') {
+      return '비가 오면 우산을 꼭 챙기세요! ☔';
+    } else if (weather?.pm10 !== undefined && weather.pm10 > 75) {
+      return '미세먼지가 심하면 마스크 착용을 잊지 마세요! 😷';
+    } else if (weather?.temp_max !== undefined && weather.temp_max >= 33) {
+      return '폭염 시 시원한 옷차림과 물을 충분히 챙기세요! 🥵';
+    } else if (weather?.condition === 'Snow') {
+      return '눈이 올 때는 미끄러지지 않도록 주의하세요! ❄️';
+    }
+    return '';
+  };
+
+  // 오늘과 내일 날짜 가져오기
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const formatDate = (date: Date): string => {
+    return `${date.getDate()}`; // 날짜만 간단하게 가져오기
+  };
+
+  const filterTasksByDate = (date: string) => {
+    return tasks.filter((task) => task.date === date);
+  };
+
+  const todayDateStr = formatDate(today); // 오늘 날짜
+  const tomorrowDateStr = formatDate(tomorrow); // 내일 날짜
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <View style={styles.imageContainer}>
+          <Image
+            source={images[imageIndex]} // 현재 이미지 인덱스에 따라 이미지 변경
+            style={styles.weatherIcon}
+          />
+        </View>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text style={styles.loadingText}>날씨 정보를 불러오는 중입니다...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!weather) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Text>날씨 정보를 불러올 수 없습니다.</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <View style={styles.headerContainer}>
           <Text style={styles.dateText}>{weather.date}</Text>
-          <View style={styles.weatherContainer}>
-            <Ionicons
-              name={icons[weather.condition] || "alert"}
-              size={100}
-              color="black"
-            />
-            <Text style={styles.temperatureText}>{weather.temp}°C</Text>
-          </View>
-          <Text style={styles.minMaxText}>
-            최저: {weather.temp_min}°C / 최고: {weather.temp_max}°C
-          </Text>
           <Text style={styles.locationText}>{weather.location}</Text>
-          <Text style={styles.pollutionText}>
-            미세먼지: {weather.pm10} µg/m³ ({pm10Level})
-          </Text>
-          {preparationMessage ? (
-            <Text style={styles.preparationMessageText}>
-              {preparationMessage}
+
+          {/* 이미지 렌더링 */}
+          {getWeatherIcon(weather.condition) && (
+            <Image
+              source={getWeatherIcon(weather.condition)} // 날씨에 따라 다른 아이콘 표시
+              style={styles.weatherIcon} // 스타일 적용
+            />
+          )}
+
+          <Text style={styles.temperatureText}>{weather.temp}°</Text>
+
+          {/* 최저/최고 기온과 미세먼지 정보 */}
+          <View style={styles.weatherDetailsContainer}>
+            <Text style={styles.minMaxText}>
+              <Text style={styles.minMaxLabel}>최저 기온: </Text>
+              <Text style={{ color: 'blue', fontWeight: 'bold', fontSize: 20 }}>
+                {weather.temp_min}°
+              </Text>{' '}
+              <Text style={styles.minMaxLabel}>최고 기온: </Text>
+              <Text style={{ color: 'red', fontWeight: 'bold', fontSize: 20 }}>
+                {weather.temp_max}°
+              </Text>
             </Text>
-          ) : null}
-          {message ? <Text style={styles.messageText}>{message}</Text> : null}
+            <Text style={styles.minMaxText}>
+              <Text style={styles.minMaxLabel}>미세먼지: </Text>
+              <Text
+                style={{
+                  color: getAirQualityColor(weather.pm10),
+                  fontWeight: 'bold',
+                  fontSize: 20,
+                }}
+              >
+                {getAirQualityLevel(weather.pm10)}
+              </Text>
+            </Text>
+          </View>
+
+          {/* 조건에 맞는 준비물 문구 */}
+          {getPreparationMessage() && (
+            <View style={styles.preparationContainer}>
+              <Text style={styles.preparationText}>
+                {getPreparationMessage()}
+              </Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>알림 사항</Text>
-          <FlatList
-            data={alerts}
-            renderItem={({ item }) => (
-              <View style={styles.todoItem}>
-                <Ionicons
-                  name="alert-circle-outline"
-                  size={24}
-                  color="orange"
+        <View style={styles.warningContainer}>
+          <Text style={styles.warningText}>{getWeatherWarningMessage()}</Text>
+        </View>
+
+        <View style={styles.taskRow}>
+          {/* 오늘의 일정 */}
+          <View style={[styles.dateCard, styles.todayCard]}>
+            <Text style={styles.sectionTitle}>
+              오늘의 일정 ({todayDateStr}일)
+            </Text>
+            {filterTasksByDate('2024-09-30').map((task) => (
+              <View key={task.id} style={styles.taskItem}>
+                <CheckBox
+                  value={task.isChecked}
+                  onValueChange={() => toggleTaskChecked(task.id)}
                 />
-                <Text style={styles.todoText}>{item.task}</Text>
-              </View>
-            )}
-            keyExtractor={(item) => item.id.toString()}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>알림 사항이 없습니다.</Text>
-            }
-          />
-        </View>
-
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>오늘의 복용약 💊</Text>
-          <FlatList
-            data={medications}
-            renderItem={({ item }) => (
-              <View style={styles.medicationItem}>
-                <Text style={styles.medicationText}>
-                  {item.name} {item.time && `- ${item.time}`}
+                <Text
+                  style={[
+                    styles.taskText,
+                    task.isChecked && styles.strikeThrough,
+                  ]}
+                >
+                  {task.title}
                 </Text>
               </View>
-            )}
-            keyExtractor={(item) => item.id.toString()}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>오늘 복용할 약이 없습니다.</Text>
-            }
-          />
-        </View>
+            ))}
+          </View>
 
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>오늘의 일정 📆</Text>
-          <FlatList
-            data={schedules}
-            renderItem={({ item }) => (
-              <View style={styles.scheduleItem}>
-                <Text style={styles.scheduleText}>
-                  {item.title} {item.time && `- ${item.time}`}
+          {/* 내일의 일정 */}
+          <View style={styles.dateCard}>
+            <Text style={styles.sectionTitle}>
+              내일의 일정 ({tomorrowDateStr}일)
+            </Text>
+            {filterTasksByDate('2024-10-01').map((task) => (
+              <View key={task.id} style={styles.taskItem}>
+                <CheckBox
+                  value={task.isChecked}
+                  onValueChange={() => toggleTaskChecked(task.id)}
+                />
+                <Text
+                  style={[
+                    styles.taskText,
+                    task.isChecked && styles.strikeThrough,
+                  ]}
+                >
+                  {task.title}
                 </Text>
               </View>
-            )}
-            keyExtractor={(item) => item.id.toString()}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>오늘 일정이 없습니다.</Text>
-            }
-          />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>금일 복용약 💊</Text>
+          {medications.map((med) => (
+            <View key={med.id} style={styles.taskItem}>
+              <CheckBox
+                value={med.isChecked}
+                onValueChange={() => toggleMedicationChecked(med.id)}
+              />
+              <Text
+                style={[styles.taskText, med.isChecked && styles.strikeThrough]}
+              >
+                {med.name}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>필수 확인사항 ✅</Text>
+          {notifications.map((notif) => (
+            <View key={notif.id} style={styles.taskItem}>
+              <CheckBox
+                value={notif.isChecked}
+                onValueChange={() => toggleNotificationChecked(notif.id)}
+              />
+              <Text
+                style={[
+                  styles.taskText,
+                  notif.isChecked && styles.strikeThrough,
+                ]}
+              >
+                {notif.message}
+              </Text>
+            </View>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -369,91 +489,129 @@ const WeatherScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF",
+    backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageContainer: {
+    marginBottom: 20,
+  },
+  weatherIcon: {
+    width: 100, // 이미지 너비
+    height: 100, // 이미지 높이
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#333',
+    marginTop: 10,
   },
   headerContainer: {
-    alignItems: "center",
+    backgroundColor: '#fff',
     paddingVertical: 20,
+    paddingHorizontal: 15,
+    alignItems: 'center',
   },
   dateText: {
-    fontSize: 30,
-    marginVertical: 5,
-    color: "#000",
-  },
-  weatherContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 5,
-  },
-  temperatureText: {
-    fontSize: 70,
-    marginLeft: 10,
-    color: "#000",
-  },
-  minMaxText: {
-    fontSize: 30,
-    marginVertical: 5,
-    color: "#000",
+    fontSize: 23, // 5px 키움
+    color: '#000',
   },
   locationText: {
-    fontSize: 50,
-    marginVertical: 5,
-    color: "#000",
+    fontSize: 29, // 5px 키움
+    color: '#000',
   },
-  pollutionText: {
-    fontSize: 30,
-    marginVertical: 5,
-    color: "#000",
+  weatherDetailsContainer: {
+    marginBottom: 15,
+    alignItems: 'center', // 중앙 정렬
   },
-  preparationMessageText: {
-    fontSize: 16,
-    marginVertical: 5,
-    color: "#000",
+  temperatureText: {
+    fontSize: 72,
+    fontWeight: 'bold',
+    color: '#ff8c00',
+    marginLeft: 28, // 오른쪽으로 살짝 이동
   },
-  messageText: {
-    fontSize: 16,
-    marginVertical: 5,
-    color: "#000",
+  minMaxText: {
+    fontSize: 20, // 글씨 크기 키움
+    fontWeight: 'bold', // 굵게 설정
+    color: '#000', // 기본 글씨 색은 검정
   },
-  sectionContainer: {
+  minMaxLabel: {
+    fontSize: 20,
+    color: '#000',
+    fontWeight: 'bold',
+  },
+  warningContainer: {
+    marginVertical: 10,
     paddingHorizontal: 20,
-    paddingBottom: 20,
+  },
+  warningText: {
+    fontSize: 16,
+    color: 'red',
+    fontWeight: 'bold',
+  },
+  taskRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 20,
+  },
+  dateCard: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    width: '45%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  todayCard: {
+    borderColor: '#ff6347', // 테두리 색상
+    borderWidth: 2,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginVertical: 10,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+    alignSelf: 'center',
   },
   sectionTitle: {
-    fontSize: 30,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
     marginBottom: 10,
-    fontWeight: "bold",
-    color: "#1e90ff",
-    textAlign: "center",
   },
-  todoItem: {
-    flexDirection: "row",
-    alignItems: "center",
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  taskText: {
+    fontSize: 18,
+  },
+  strikeThrough: {
+    textDecorationLine: 'line-through',
+    color: 'gray',
+  },
+  preparationContainer: {
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  preparationText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
     marginVertical: 5,
-    width: "100%",
-  },
-  todoText: {
-    fontSize: 30,
-    marginLeft: 10,
-    color: "#000",
-  },
-  medicationItem: {
-    marginVertical: 5,
-  },
-  medicationText: {
-    fontSize: 20,
-    color: "#000",
-  },
-  scheduleItem: {
-    marginVertical: 5,
-  },
-  scheduleText: {
-    fontSize: 20,
-    color: "#000",
-  },
-  emptyText: {
-    textAlign: "center",
-    color: "#888",
   },
 });
 

@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "741866985637",
+    "firebase_url": "https://sicapp-ad8de-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "sicapp-ad8de",
+    "storage_bucket": "sicapp-ad8de.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:741866985637:android:d1f393301364c62626d54c",
+        "android_client_info": {
+          "package_name": "com.sic.outmate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDc2RAkbV1iXTHwna8dRcu_1hUb3uovc78"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
