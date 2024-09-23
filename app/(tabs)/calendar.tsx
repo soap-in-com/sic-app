@@ -64,6 +64,10 @@
 //   const [dateData, setDateData] = useState<DayData[]>(
 //     generateDateData(today, 50)
 //   ); // 날짜 데이터
+//   const [deleteMode, setDeleteMode] = useState(false); // 삭제 모드 상태 추가
+//   const [selectedItems, setSelectedItems] = useState<{
+//     [key: string]: boolean;
+//   }>({}); // 선택한 항목 상태
 
 //   // 날짜 데이터 생성 함수
 //   function generateDateData(baseDate: Date, numDays: number): DayData[] {
@@ -137,11 +141,19 @@
 //     meal: string;
 //   }) => {
 //     const newData = [...dateData];
-//     const todayData = newData.find((day) => day.isToday);
-//     if (todayData) {
-//       todayData.medicines.push({ label: data.name, checked: false });
+
+//     // 날짜 형식이 'YYYY-MM-DD'라면 해당 날짜의 인덱스를 찾음
+//     const formattedDate = getFormattedDate(new Date(data.date));
+//     const targetIndex = newData.findIndex((day) => day.date === formattedDate);
+
+//     if (targetIndex !== -1) {
+//       newData[targetIndex].medicines.push({
+//         label: `${data.name} (${data.time}, ${data.meal})`,
+//         checked: false,
+//       });
 //       setDateData(newData);
 //     }
+
 //     closeModal(); // 모달 닫기
 //   };
 
@@ -163,6 +175,37 @@
 //   // 일정 추가 모달 닫기 함수
 //   const closeScheduleAddModal = () => {
 //     setScheduleAddModalVisible(false); // 일정 추가 모달 닫기
+//   };
+
+//   // 삭제 모드 토글 함수
+//   const toggleDeleteMode = () => {
+//     setDeleteMode(!deleteMode);
+//     setSelectedItems({}); // 선택된 항목 초기화
+//   };
+
+//   // 항목 선택 토글 함수
+//   const toggleSelectItem = (key: string) => {
+//     setSelectedItems((prevSelectedItems) => ({
+//       ...prevSelectedItems,
+//       [key]: !prevSelectedItems[key],
+//     }));
+//   };
+
+//   // 선택된 항목 삭제 함수
+//   const deleteSelectedItems = () => {
+//     const newData = dateData.map((day) => {
+//       const medicines = day.medicines.filter(
+//         (medicine) => !selectedItems[medicine.label]
+//       );
+//       const schedules = day.schedules.filter(
+//         (schedule) => !selectedItems[schedule.label]
+//       );
+//       return { ...day, medicines, schedules };
+//     });
+
+//     setDateData(newData);
+//     setDeleteMode(false);
+//     setSelectedItems({});
 //   };
 
 //   return (
@@ -213,6 +256,7 @@
 //                         }
 //                         checkedColor={medicine.checked ? '#FF6F00' : undefined}
 //                         containerStyle={styles.checkBoxContainer}
+//                         size={40} // 체크박스 크기 키움
 //                       />
 //                       <Text
 //                         style={[
@@ -222,6 +266,22 @@
 //                       >
 //                         {medicine.label}
 //                       </Text>
+//                       {deleteMode && (
+//                         <TouchableOpacity
+//                           style={styles.selectButton}
+//                           onPress={() => toggleSelectItem(medicine.label)}
+//                         >
+//                           <Text
+//                             style={[
+//                               styles.selectButtonText,
+//                               selectedItems[medicine.label] &&
+//                                 styles.selectedText,
+//                             ]}
+//                           >
+//                             {selectedItems[medicine.label] ? '선택됨' : '선택'}
+//                           </Text>
+//                         </TouchableOpacity>
+//                       )}
 //                     </View>
 //                   ))}
 //                 </View>
@@ -275,6 +335,7 @@
 //                         }
 //                         checkedColor={schedule.checked ? 'blue' : undefined}
 //                         containerStyle={styles.checkBoxContainer}
+//                         size={40} // 체크박스 크기 키움
 //                       />
 //                       <Text
 //                         style={[
@@ -284,6 +345,22 @@
 //                       >
 //                         {schedule.label}
 //                       </Text>
+//                       {deleteMode && (
+//                         <TouchableOpacity
+//                           style={styles.selectButton}
+//                           onPress={() => toggleSelectItem(schedule.label)}
+//                         >
+//                           <Text
+//                             style={[
+//                               styles.selectButtonText,
+//                               selectedItems[schedule.label] &&
+//                                 styles.selectedText,
+//                             ]}
+//                           >
+//                             {selectedItems[schedule.label] ? '선택됨' : '선택'}
+//                           </Text>
+//                         </TouchableOpacity>
+//                       )}
 //                     </View>
 //                   ))}
 //                 </View>
@@ -329,7 +406,10 @@
 //             <Text style={styles.actionButtonText}>메모하기</Text>
 //           </TouchableOpacity>
 
-//           <TouchableOpacity style={[styles.actionButton, styles.deleteButton]}>
+//           <TouchableOpacity
+//             style={[styles.actionButton, styles.deleteButton]}
+//             onPress={toggleDeleteMode}
+//           >
 //             <Image
 //               source={require('../../assets/images/close.png')}
 //               style={styles.icon}
@@ -337,6 +417,17 @@
 //             <Text style={styles.actionButtonText}>복용약, 일정 삭제</Text>
 //           </TouchableOpacity>
 //         </View>
+
+//         {deleteMode && (
+//           <View style={styles.actionContainer}>
+//             <TouchableOpacity
+//               style={[styles.actionButton, styles.deleteButton]}
+//               onPress={deleteSelectedItems}
+//             >
+//               <Text style={styles.deleteButtonText}>선택 항목 삭제</Text>
+//             </TouchableOpacity>
+//           </View>
+//         )}
 
 //         {/* 하단 여백 추가 */}
 //         <View style={styles.bottomSpacer} />
@@ -395,12 +486,8 @@
 //   },
 //   actionContainer: {
 //     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     marginTop: 5, // 버튼 사이 여백 조정
-//     paddingHorizontal: 8, // 버튼 사이의 여백을 줄이기
-//   },
-//   bottomSpacer: {
-//     height: 50, // 스크롤 시 하단에 추가 여백
+//     justifyContent: 'center',
+//     marginTop: 10,
 //   },
 //   headerWithIcon: {
 //     flexDirection: 'row',
@@ -465,18 +552,20 @@
 //     flexDirection: 'row',
 //     alignItems: 'center',
 //     marginBottom: 8,
-//   },
-//   medicineText: {
-//     fontSize: 18,
-//     fontWeight: 'bold',
+//     paddingVertical: 10, // 높이 키움
 //   },
 //   scheduleItem: {
 //     flexDirection: 'row',
 //     alignItems: 'center',
 //     marginBottom: 8,
+//     paddingVertical: 10, // 높이 키움
+//   },
+//   medicineText: {
+//     fontSize: 22, // 텍스트 크기 키움
+//     fontWeight: 'bold',
 //   },
 //   scheduleText: {
-//     fontSize: 18,
+//     fontSize: 22, // 텍스트 크기 키움
 //     fontWeight: 'bold',
 //   },
 //   checkedText: {
@@ -486,7 +575,19 @@
 //   checkBoxContainer: {
 //     padding: 0,
 //     margin: 0,
-//     marginRight: 5,
+//     marginRight: 10, // 체크박스 여백 추가
+//   },
+//   selectButton: {
+//     marginLeft: 10,
+//     padding: 5,
+//     backgroundColor: '#eee',
+//     borderRadius: 5,
+//   },
+//   selectButtonText: {
+//     color: '#555',
+//   },
+//   selectedText: {
+//     color: '#FF6F00',
 //   },
 //   actionButton: {
 //     flex: 1,
@@ -519,10 +620,17 @@
 //     fontSize: 23,
 //     marginTop: 8,
 //   },
+//   deleteButtonText: {
+//     color: '#fff',
+//     fontSize: 18,
+//   },
 //   icon: {
 //     width: 70,
 //     height: 70,
 //     marginBottom: 8,
+//   },
+//   bottomSpacer: {
+//     height: 50, // 스크롤 시 하단에 추가 여백
 //   },
 // });
 
@@ -594,6 +702,10 @@ const ScheduleAndMedicineScreen: React.FC = () => {
   const [dateData, setDateData] = useState<DayData[]>(
     generateDateData(today, 50)
   ); // 날짜 데이터
+  const [deleteMode, setDeleteMode] = useState(false); // 삭제 모드 상태 추가
+  const [selectedItems, setSelectedItems] = useState<{
+    [key: string]: boolean;
+  }>({}); // 선택한 항목 상태
 
   // 날짜 데이터 생성 함수
   function generateDateData(baseDate: Date, numDays: number): DayData[] {
@@ -703,6 +815,37 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     setScheduleAddModalVisible(false); // 일정 추가 모달 닫기
   };
 
+  // 삭제 모드 토글 함수
+  const toggleDeleteMode = () => {
+    setDeleteMode(!deleteMode);
+    setSelectedItems({}); // 선택된 항목 초기화
+  };
+
+  // 항목 선택 토글 함수
+  const toggleSelectItem = (key: string) => {
+    setSelectedItems((prevSelectedItems) => ({
+      ...prevSelectedItems,
+      [key]: !prevSelectedItems[key],
+    }));
+  };
+
+  // 선택된 항목 삭제 함수
+  const deleteSelectedItems = () => {
+    const newData = dateData.map((day) => {
+      const medicines = day.medicines.filter(
+        (medicine) => !selectedItems[medicine.label]
+      );
+      const schedules = day.schedules.filter(
+        (schedule) => !selectedItems[schedule.label]
+      );
+      return { ...day, medicines, schedules };
+    });
+
+    setDateData(newData);
+    setDeleteMode(false);
+    setSelectedItems({});
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
@@ -744,14 +887,18 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                   <Text style={styles.dayHeader}>{item.date}</Text>
                   {item.medicines.map((medicine: Medicine, idx: number) => (
                     <View style={styles.medicineItem} key={idx}>
-                      <CheckBox
-                        checked={medicine.checked}
-                        onPress={() =>
-                          toggleCheckBox(dateIndex, 'medicine', idx)
-                        }
-                        checkedColor={medicine.checked ? '#FF6F00' : undefined}
-                        containerStyle={styles.checkBoxContainer}
-                      />
+                      {!deleteMode && (
+                        <CheckBox
+                          checked={medicine.checked}
+                          onPress={() =>
+                            toggleCheckBox(dateIndex, 'medicine', idx)
+                          }
+                          checkedColor={
+                            medicine.checked ? '#FF6F00' : undefined
+                          }
+                          containerStyle={styles.checkBoxContainer}
+                        />
+                      )}
                       <Text
                         style={[
                           styles.medicineText,
@@ -760,6 +907,14 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                       >
                         {medicine.label}
                       </Text>
+                      {deleteMode && (
+                        <CheckBox
+                          checked={selectedItems[medicine.label]}
+                          onPress={() => toggleSelectItem(medicine.label)}
+                          checkedColor="red" // 선택된 항목 빨간색으로 표시
+                          containerStyle={styles.checkBoxContainer}
+                        />
+                      )}
                     </View>
                   ))}
                 </View>
@@ -806,14 +961,16 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                   <Text style={styles.dayHeader}>{item.date}</Text>
                   {item.schedules.map((schedule: Schedule, idx: number) => (
                     <View style={styles.scheduleItem} key={idx}>
-                      <CheckBox
-                        checked={schedule.checked}
-                        onPress={() =>
-                          toggleCheckBox(dateIndex, 'schedule', idx)
-                        }
-                        checkedColor={schedule.checked ? 'blue' : undefined}
-                        containerStyle={styles.checkBoxContainer}
-                      />
+                      {!deleteMode && (
+                        <CheckBox
+                          checked={schedule.checked}
+                          onPress={() =>
+                            toggleCheckBox(dateIndex, 'schedule', idx)
+                          }
+                          checkedColor={schedule.checked ? 'blue' : undefined}
+                          containerStyle={styles.checkBoxContainer}
+                        />
+                      )}
                       <Text
                         style={[
                           styles.scheduleText,
@@ -822,6 +979,14 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                       >
                         {schedule.label}
                       </Text>
+                      {deleteMode && (
+                        <CheckBox
+                          checked={selectedItems[schedule.label]}
+                          onPress={() => toggleSelectItem(schedule.label)}
+                          checkedColor="red" // 선택된 항목 빨간색으로 표시
+                          containerStyle={styles.checkBoxContainer}
+                        />
+                      )}
                     </View>
                   ))}
                 </View>
@@ -867,7 +1032,10 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             <Text style={styles.actionButtonText}>메모하기</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionButton, styles.deleteButton]}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={toggleDeleteMode}
+          >
             <Image
               source={require('../../assets/images/close.png')}
               style={styles.icon}
@@ -875,6 +1043,17 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             <Text style={styles.actionButtonText}>복용약, 일정 삭제</Text>
           </TouchableOpacity>
         </View>
+
+        {deleteMode && (
+          <View style={styles.actionContainer}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={deleteSelectedItems}
+            >
+              <Text style={styles.deleteButtonText}>선택 항목 삭제</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* 하단 여백 추가 */}
         <View style={styles.bottomSpacer} />
@@ -933,12 +1112,8 @@ const styles = StyleSheet.create({
   },
   actionContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 5, // 버튼 사이 여백 조정
-    paddingHorizontal: 8, // 버튼 사이의 여백을 줄이기
-  },
-  bottomSpacer: {
-    height: 50, // 스크롤 시 하단에 추가 여백
+    justifyContent: 'center',
+    marginTop: 10,
   },
   headerWithIcon: {
     flexDirection: 'row',
@@ -1004,14 +1179,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  medicineText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   scheduleItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  medicineText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   scheduleText: {
     fontSize: 18,
@@ -1057,10 +1232,17 @@ const styles = StyleSheet.create({
     fontSize: 23,
     marginTop: 8,
   },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 18,
+  },
   icon: {
     width: 70,
     height: 70,
     marginBottom: 8,
+  },
+  bottomSpacer: {
+    height: 50, // 스크롤 시 하단에 추가 여백
   },
 });
 
