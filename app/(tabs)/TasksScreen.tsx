@@ -45,68 +45,65 @@ const TasksScreen: React.FC = () => {
 
   const openModal = (date: string) => {
     setSelectedDate(date);
-    setModalVisible(true);  // 모달 열기
+    setModalVisible(true); // 모달 열기
   };
 
   const closeModal = () => {
-    setModalVisible(false);  // 모달 닫기
+    setModalVisible(false); // 모달 닫기
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.outerCard}>
-        <Text style={styles.title}>일정 ✅</Text>
-        <View style={styles.cardsContainer}>
-          {/* 오늘 일정 카드 */}
-          <TouchableOpacity onPress={() => openModal('2024-09-22')} style={[styles.card, styles.todayCard]}>
-            <Text style={styles.dateText}>{todayDateStr}</Text>
-            {tasks
-              .filter((task) => task.date === '2024-09-22')
-              .slice(0, 3)
-              .map((task) => (
-                <TouchableOpacity key={task.id} onPress={() => toggleTaskChecked(task.id)} style={styles.item}>
-                  <CheckBox
-                    value={task.isChecked}
-                    onValueChange={() => toggleTaskChecked(task.id)}
-                    color={task.isChecked ? '#007AFF' : undefined}
-                  />
-                  <Text style={[styles.taskText, task.isChecked && styles.strikeThrough]}>
-                    {task.title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            {tasks.filter((task) => task.date === '2024-09-22').length > 3 && (
-              <TouchableOpacity onPress={() => openModal('2024-09-22')}>
-                <Text style={styles.moreText}>+ 더 보기</Text>
+      <View style={styles.cardsContainer}>
+        {/* 오늘 일정 카드 */}
+        <TouchableOpacity onPress={() => openModal('2024-09-22')} style={[styles.card, styles.todayCard]}>
+          <Text style={styles.dateText}>{todayDateStr}</Text>
+          {tasks
+            .filter((task) => task.date === '2024-09-22')
+            .slice(0, 3)
+            .map((task) => (
+              <TouchableOpacity key={task.id} onPress={() => toggleTaskChecked(task.id)} style={styles.item}>
+                <CheckBox
+                  value={task.isChecked}
+                  onValueChange={() => toggleTaskChecked(task.id)}
+                  color={'#007AFF'} // 파란색 체크박스
+                />
+                <Text style={[styles.taskText, task.isChecked && styles.strikeThrough]}>
+                  {task.title}
+                </Text>
               </TouchableOpacity>
-            )}
-          </TouchableOpacity>
+            ))}
+          {tasks.filter((task) => task.date === '2024-09-22').length > 3 && (
+            <TouchableOpacity onPress={() => openModal('2024-09-22')}>
+              <Text style={styles.moreText}>+ 더 보기</Text>
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
 
-          {/* 내일 일정 카드 */}
-          <TouchableOpacity onPress={() => openModal('2024-09-23')} style={styles.card}>
-            <Text style={styles.dateText}>{tomorrowDateStr}</Text>
-            {tasks
-              .filter((task) => task.date === '2024-09-23')
-              .slice(0, 3)
-              .map((task) => (
-                <TouchableOpacity key={task.id} onPress={() => toggleTaskChecked(task.id)} style={styles.item}>
-                  <CheckBox
-                    value={task.isChecked}
-                    onValueChange={() => toggleTaskChecked(task.id)}
-                    color={task.isChecked ? '#007AFF' : undefined}
-                  />
-                  <Text style={[styles.taskText, task.isChecked && styles.strikeThrough]}>
-                    {task.title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            {tasks.filter((task) => task.date === '2024-09-23').length > 3 && (
-              <TouchableOpacity onPress={() => openModal('2024-09-23')}>
-                <Text style={styles.moreText}>+ 더 보기</Text>
+        {/* 내일 일정 카드 */}
+        <TouchableOpacity onPress={() => openModal('2024-09-23')} style={styles.card}>
+          <Text style={styles.dateText}>{tomorrowDateStr}</Text>
+          {tasks
+            .filter((task) => task.date === '2024-09-23')
+            .slice(0, 3)
+            .map((task) => (
+              <TouchableOpacity key={task.id} onPress={() => toggleTaskChecked(task.id)} style={styles.item}>
+                <CheckBox
+                  value={task.isChecked}
+                  onValueChange={() => toggleTaskChecked(task.id)}
+                  color={'#007AFF'} // 파란색 체크박스
+                />
+                <Text style={[styles.taskText, task.isChecked && styles.strikeThrough]}>
+                  {task.title}
+                </Text>
               </TouchableOpacity>
-            )}
-          </TouchableOpacity>
-        </View>
+            ))}
+          {tasks.filter((task) => task.date === '2024-09-23').length > 3 && (
+            <TouchableOpacity onPress={() => openModal('2024-09-23')}>
+              <Text style={styles.moreText}>+ 더 보기</Text>
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* 모달 */}
@@ -129,7 +126,7 @@ const TasksScreen: React.FC = () => {
                     <CheckBox
                       value={task.isChecked}
                       onValueChange={() => toggleTaskChecked(task.id)}
-                      color={task.isChecked ? '#007AFF' : undefined}
+                      color={'#007AFF'} // 파란색 체크박스
                     />
                     <Text style={[styles.modalTaskText, task.isChecked && styles.strikeThrough]}>
                       {task.title}
@@ -154,31 +151,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     margin: 5,
   },
-  outerCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
   cardsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   card: {
-    width: '49%',  // 카드 가로 크기
+    width: '49%', // 카드 가로 크기
     backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 25,  // 카드 크기를 키우기 위해 패딩을 더 넓게 설정
+    padding: 25, // 카드 크기를 키우기 위해 패딩을 더 넓게 설정
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -187,10 +168,10 @@ const styles = StyleSheet.create({
   },
   todayCard: {
     borderWidth: 2,
-    borderColor: '#007AFF',  // 파란 테두리 색상 적용
+    borderColor: '#007AFF', // 파란 테두리 색상 적용
   },
   dateText: {
-    fontSize: 18,  // 카드 크기에 맞춰 텍스트 크기 확대
+    fontSize: 18, // 카드 크기에 맞춰 텍스트 크기 확대
     fontWeight: 'bold',
     marginBottom: 10,
     color: '#333',
@@ -219,29 +200,29 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'center',  // 모달을 수직으로 가운데 정렬
-    alignItems: 'center',      // 모달을 수평으로 가운데 정렬
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',  // 배경 어둡게 처리
+    justifyContent: 'center', // 모달을 수직으로 가운데 정렬
+    alignItems: 'center', // 모달을 수평으로 가운데 정렬
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // 배경 어둡게 처리
   },
   modalContent: {
-    width: '80%',               // 모달 가로 크기
+    width: '80%', // 모달 가로 크기
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
-    alignItems: 'flex-start',    // 왼쪽 정렬
+    alignItems: 'flex-start', // 왼쪽 정렬
   },
   modalTitle: {
-    fontSize: 29,  // 모달 안의 글씨 크기
+    fontSize: 29, // 모달 안의 글씨 크기
     fontWeight: 'bold',
     marginBottom: 15,
     textAlign: 'center',
     width: '100%',
   },
   modalTaskText: {
-    fontSize: 29,  // 모달 체크박스 항목의 글씨 크기
+    fontSize: 29, // 모달 체크박스 항목의 글씨 크기
     marginLeft: 10,
-    textAlign: 'left',  // 텍스트 왼쪽 정렬
-    fontWeight: 'bold'
+    textAlign: 'left', // 텍스트 왼쪽 정렬
+    fontWeight: 'bold',
   },
   closeButton: {
     backgroundColor: '#007AFF',
@@ -249,7 +230,7 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     marginTop: 20,
-    width: '100%',  // 닫기 버튼이 모달 가로 크기에 맞도록 설정
+    width: '100%', // 닫기 버튼이 모달 가로 크기에 맞도록 설정
   },
   closeButtonText: {
     color: '#fff',

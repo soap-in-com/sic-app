@@ -19,15 +19,6 @@ const API_KEY = '724e4827102510377b55ebc097c13897';
 const WeatherComponent: React.FC = () => {
   const [weather, setWeather] = useState<Weather | null>(null);
   const [loading, setLoading] = useState(true);
-  const [imageIndex, setImageIndex] = useState(0);
-
-  const images = [
-    require('../../assets/images/weather/sunny.png'),
-    require('../../assets/images/weather/rainy.png'),
-    require('../../assets/images/weather/snowy.png'),
-    require('../../assets/images/weather/windy.png'),
-    require('../../assets/images/weather/thunderstorm.png'),
-  ];
 
   useEffect(() => {
     const fetchWeather = async () => {
@@ -76,7 +67,10 @@ const WeatherComponent: React.FC = () => {
         const temp = Math.round(weatherResult.data.main.temp);
         const temp_min = Math.round(weatherResult.data.main.temp_min);
         const temp_max = weatherResult.data.main.temp_max ? Math.round(weatherResult.data.main.temp_max) : 0;
+
+        // weather 배열에서 상태와 설명을 모두 가져옴
         const condition = weatherResult.data.weather[0].main;
+        const description = weatherResult.data.weather[0].description;
 
         const pollutionResult = await axios.get(
           `http://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`
@@ -86,13 +80,13 @@ const WeatherComponent: React.FC = () => {
         // 날짜와 요일 계산
         const date = new Date();
         const formattedDate = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-        const dayOfWeek = date.toLocaleString('ko-KR', { weekday: 'long' }); // 요일 가져오기 (예: "일요일")
+        const dayOfWeek = date.toLocaleString('ko-KR', { weekday: 'short' }); // 요일을 간략하게 표시
 
         setWeather({
           temp,
           temp_min,
           temp_max,
-          condition,
+          condition: description, // 더 구체적인 날씨 설명을 사용
           location,
           pm10,
           date: formattedDate,
@@ -109,13 +103,22 @@ const WeatherComponent: React.FC = () => {
     fetchWeather();
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setImageIndex((prevIndex) => (prevIndex + 1) % images.length);
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
+  // 날씨에 따른 아이콘 반환 함수 추가
+  const getWeatherIcon = (condition: string) => {
+    if (condition.includes('clear')) {
+      return require('../../assets/images/weather/sunny.png'); // 맑은 날씨
+    } else if (condition.includes('cloud')) {
+      return require('../../assets/images/weather/cloudy.png'); // 흐린 날씨
+    } else if (condition.includes('rain')) {
+      return require('../../assets/images/weather/rainy.png'); // 비오는 날씨
+    } else if (condition.includes('snow')) {
+      return require('../../assets/images/weather/snowy.png'); // 눈 오는 날씨
+    } else if (condition.includes('thunderstorm')) {
+      return require('../../assets/images/weather/thunderstorm.png'); // 천둥 번개
+    } else {
+      return null; // 기본 이미지는 필요 없으므로 null 반환
+    }
+  };
 
   // 공휴일 및 설날, 추석 리스트
   const holidays = [
@@ -124,18 +127,6 @@ const WeatherComponent: React.FC = () => {
     '2024-09-17', '2024-09-18', '2024-09-19', '2024-10-03', '2024-10-09',
     '2024-12-25', '2025-01-01', '2025-01-28', '2025-01-29', '2025-01-30',
     '2025-05-05', '2025-06-06', '2025-08-15', '2025-10-03', '2025-10-09',
-    '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-01',
-    '2026-05-05', '2026-06-06', '2026-08-15', '2026-10-03', '2026-10-09',
-    '2026-12-25',
-    '2027-01-01', '2027-02-06', '2027-02-07', '2027-02-08', '2027-03-01',
-    '2027-05-05', '2027-06-06', '2027-08-15', '2027-10-03', '2027-10-09',
-    '2027-12-25',
-    '2028-01-01', '2028-01-26', '2028-01-27', '2028-01-28', '2028-03-01',
-    '2028-05-05', '2028-06-06', '2028-08-15', '2028-10-03', '2028-10-09',
-    '2028-12-25',
-    '2029-01-01', '2029-02-13', '2029-02-14', '2029-02-15', '2029-03-01',
-    '2029-05-05', '2029-06-06', '2029-08-15', '2029-10-03', '2029-10-09',
-    '2029-12-25',
   ];
 
   const isHoliday = (date: string) => holidays.includes(date);
@@ -150,33 +141,43 @@ const WeatherComponent: React.FC = () => {
     }
   };
 
-  const getWeatherIcon = (condition: string) => {
-    switch (condition) {
-      case 'Clouds':
-        return require('../../assets/images/weather/cloudy.png');
-      case 'Clear':
-        return require('../../assets/images/weather/sunny.png');
-      case 'Rain':
-        return require('../../assets/images/weather/rainy.png');
-      case 'Snow':
-        return require('../../assets/images/weather/snowy.png');
-      case 'Thunderstorm':
-        return require('../../assets/images/weather/thunderstorm.png');
-      case 'Drizzle':
-        return require('../../assets/images/weather/sunny&cloud.png');
-      case 'Wind':
-        return require('../../assets/images/weather/windy.png');
-      default:
-        return null;
+  // 온도에 따른 색상 설정
+  const getTemperatureColor = (temp: number) => {
+    if (temp <= 0) return 'blue';
+    if (temp > 0 && temp <= 15) return 'skyblue';
+    if (temp > 15 && temp <= 25) return 'black';
+    if (temp > 25 && temp <= 30) return 'orange';
+    return 'red'; // 31도 이상일 경우 빨간색
+  };
+
+  // 미세먼지 농도에 따른 색상 설정
+  const getPm10Color = (pm10: number) => {
+    if (pm10 <= 30) return 'blue';
+    if (pm10 > 30 && pm10 <= 80) return 'green';
+    if (pm10 > 80 && pm10 <= 150) return 'orange';
+    return 'red'; // 151 이상일 경우 빨간색
+  };
+
+  // 날씨에 따른 준비물 문구 반환
+  const getPreparednessMessage = (condition: string) => {
+    if (condition.includes('clear')) {
+      return '햇볕이 강하니 선크림을 꼭 바르세요!';
+    } else if (condition.includes('cloud')) {
+      return '흐린 날씨이니 우산을 챙기세요.';
+    } else if (condition.includes('rain')) {
+      return '비가 오니 우산을 꼭 챙기세요!';
+    } else if (condition.includes('snow')) {
+      return '눈이 오니 따뜻하게 입고 나가세요!';
+    } else if (condition.includes('thunderstorm')) {
+      return '천둥 번개가 치니 외출을 자제하세요.';
+    } else {
+      return '';
     }
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <View style={styles.imageContainer}>
-          <Image source={images[imageIndex]} style={styles.weatherIcon} />
-        </View>
         <ActivityIndicator size="large" color="#0000ff" />
         <Text style={styles.loadingText}>날씨 정보를 불러오는 중입니다...</Text>
       </SafeAreaView>
@@ -194,18 +195,21 @@ const WeatherComponent: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
-        <Text style={[styles.dateText, { color: 'black' }]}>
+        <Text style={[styles.dateText]}>
           {weather.date} <Text style={{ color: getDayOfWeekColor(weather.dayOfWeek, weather.date) }}>({weather.dayOfWeek})</Text>
         </Text>
         <Text style={styles.locationText}>
-          <Text style={styles.boldText}>{weather.location}</Text>
+          {weather.location}
         </Text>
 
+        {/* 날씨 상태에 따른 아이콘이 존재할 경우만 표시 */}
         {getWeatherIcon(weather.condition) && (
           <Image source={getWeatherIcon(weather.condition)} style={styles.weatherIcon} />
         )}
 
-        <Text style={styles.temperatureText}>{weather.temp}°</Text>
+        <Text style={[styles.temperatureText, { color: getTemperatureColor(weather.temp) }]}>
+          {weather.temp}°
+        </Text>
 
         <View style={styles.weatherDetailsContainer}>
           <Text style={styles.minMaxText}>
@@ -216,11 +220,14 @@ const WeatherComponent: React.FC = () => {
           </Text>
           <Text style={styles.minMaxText}>
             <Text style={styles.minMaxLabel}>미세먼지: </Text>
-            <Text style={{ color: 'blue', fontWeight: 'bold', fontSize: 20 }}>좋음</Text>
+            <Text style={{ color: getPm10Color(weather.pm10), fontWeight: 'bold', fontSize: 20 }}>
+              {weather.pm10 <= 30 ? '좋음' : weather.pm10 <= 80 ? '보통' : weather.pm10 <= 150 ? '나쁨' : '매우 나쁨'}
+            </Text>
           </Text>
           {weather.temp_max - weather.temp_min >= 10 && (
             <Text style={styles.warningText}>일교차가 크니 겉옷을 챙겨주세요!</Text>
           )}
+          <Text style={styles.preparednessMessage}>{getPreparednessMessage(weather.condition)}</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -238,13 +245,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  imageContainer: {
-    marginBottom: 20,
-  },
-  weatherIcon: {
-    width: 100,
-    height: 100,
-  },
   loadingText: {
     fontSize: 16,
     color: '#333',
@@ -257,21 +257,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateText: {
-    fontSize: 23,
+    fontSize: 26, // 날짜 텍스트 크기 키움
+    fontWeight: 'bold', // 날짜 텍스트 두껍게
     color: '#000',
   },
   locationText: {
-    fontSize: 29,
+    fontSize: 24, // 위치 텍스트 크기
     color: '#000',
-  },
-  boldText: {
-    fontWeight: 'bold',
   },
   temperatureText: {
     fontSize: 72,
     fontWeight: 'bold',
-    color: '#ff8c00',
-    marginLeft: 28,
+    textAlign: 'center',
+    marginLeft: 20,
+  },
+  weatherIcon: {
+    width: 100,
+    height: 100,
+    marginBottom: 10,
   },
   weatherDetailsContainer: {
     marginBottom: 15,
@@ -291,6 +294,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: 'orange',
+  },
+  preparednessMessage: {
+    fontSize: 20,
+    color: '#000',
+    marginTop: 10,
   },
 });
 

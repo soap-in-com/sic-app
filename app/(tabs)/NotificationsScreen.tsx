@@ -10,6 +10,7 @@ const NotificationsScreen: React.FC = () => {
     { id: 3, message: '전등을 꺼주세요!', isChecked: false, color: '#32CD32' }, // 초록색
     { id: 4, message: '회의자료 확인', isChecked: false, color: '#FFA500' }, // 노란색
     { id: 5, message: '업무 마무리', isChecked: false, color: '#FFA500' }, // 노란색
+    { id: 6, message: '전화 응대하기', isChecked: false, color: '#FFA500' }, // 노란색
   ]);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -48,6 +49,11 @@ const NotificationsScreen: React.FC = () => {
               </Text>
             </View>
           ))}
+          {notifications.length > 3 && (
+            <TouchableOpacity onPress={openModal}>
+              <Text style={styles.moreText}>+ 더 보기</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
 
@@ -90,6 +96,7 @@ const NotificationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 10, // 카드의 바깥쪽 여백 담당
+    marginHorizontal: 5,
     backgroundColor: '#f5f5f5',
     flex: 1,
   },
@@ -102,6 +109,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 3, // 안드로이드 그림자 효과
+    borderWidth: 2, // 바깥쪽 테두리 두께
+    borderColor: '#32CD32', // 초록색 테두리
   },
   title: {
     fontSize: 18,

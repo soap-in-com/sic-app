@@ -110,7 +110,7 @@ const MedicationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    margin: 5,  // 카드와 화면의 바깥쪽 여백 추가
+    margin: 3,  // 바깥쪽 여백 추가
     backgroundColor: '#f5f5f5',
     flex: 1,
   },
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   title: {
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: 'bold',
     marginBottom: 15,
     textAlign: 'left',
