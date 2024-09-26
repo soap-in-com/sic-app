@@ -1,591 +1,61 @@
-// // import axios from 'axios';
-// // import { Audio } from 'expo-av';
-// // import * as FileSystem from 'expo-file-system';
-// // import React, { useEffect, useRef, useState } from 'react';
-// // import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-// // import Modal from 'react-native-modal';
-
-// // interface VoiceInputModalProps {
-// //   isVisible: boolean;
-// //   onClose: () => void;
-// //   isRecording: boolean;
-// // }
-
-// // const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
-// //   isVisible,
-// //   onClose,
-// //   isRecording,
-// // }) => {
-// //   const [recording, setRecording] = useState<Audio.Recording | null>(null); // 녹음 객체 저장
-// //   const [transcribedText, setTranscribedText] = useState('음성 인식 중...');
-// //   const [isRecord, setIsRecord] = useState(false); // 녹음 상태
-// //   const intervalRef = useRef<NodeJS.Timeout | null>(null); // 주기적으로 음성 전송
-
-// //   // 일정 주기마다 음성을 전송하는 함수
-// //   const sendAudioInChunks = async () => {
-// //     if (recording) {
-// //       try {
-// //         console.log('Sending chunk of audio to Google...');
-// //         await recording.stopAndUnloadAsync(); // 현재 녹음 중인 음성을 일시적으로 중지
-// //         const uri = recording.getURI();
-// //         if (uri) {
-// //           await sendAudioToGoogle(uri); // 음성을 전송
-// //         }
-// //         await recording.startAsync(); // 다시 녹음 시작
-// //       } catch (err) {
-// //         console.error('음성 전송 실패', err);
-// //       }
-// //     }
-// //   };
-
-// //   // Google API로 오디오 전송 함수
-// //   const sendAudioToGoogle = async (uri: string) => {
-// //     try {
-// //       console.log('Sending audio to Google, URI:', uri);
-// //       const audioFile = await FileSystem.readAsStringAsync(uri, {
-// //         encoding: FileSystem.EncodingType.Base64,
-// //       });
-
-// //       const apiKey = 'AIzaSyCRBV4NPRexVT_2yjvT1ogr4lxEWNQjMv4'; // 여기에 구글 API 키를 입력
-// //       const body = {
-// //         config: {
-// //           encoding: 'LINEAR16', // LINEAR16으로 설정
-// //           sampleRateHertz: 16000,
-// //           languageCode: 'ko-KR', // 언어 설정 (한국어)
-// //         },
-// //         audio: {
-// //           content: audioFile,
-// //         },
-// //       };
-
-// //       const response = await axios.post(
-// //         `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-// //         body,
-// //         {
-// //           headers: {
-// //             'Content-Type': 'application/json',
-// //           },
-// //         }
-// //       );
-
-// //       console.log('Google API response:', response.data);
-// //       if (response.data && response.data.results) {
-// //         const transcription = response.data.results
-// //           .map((result: any) => result.alternatives[0].transcript)
-// //           .join('\n');
-// //         setTranscribedText((prevText) => prevText + ' ' + transcription); // 이전 텍스트에 새로운 텍스트 추가
-// //       } else {
-// //         setTranscribedText((prevText) => prevText + ' [결과 없음]');
-// //       }
-// //     } catch (err) {
-// //       console.error('Google API error:', err);
-// //       setTranscribedText((prevText) => prevText + ' [실패]');
-// //     }
-// //   };
-
-// //   // 녹음 시작 함수
-// //   const startRecording = async () => {
-// //     try {
-// //       console.log('Starting new recording...');
-// //       const { status } = await Audio.requestPermissionsAsync();
-// //       if (status !== 'granted') {
-// //         alert('마이크 권한이 필요합니다.');
-// //         return;
-// //       }
-
-// //       await Audio.setAudioModeAsync({
-// //         allowsRecordingIOS: true,
-// //         interruptionModeIOS: 1, // 상수 값을 직접 설정 (1: DO_NOT_MIX)
-// //         playsInSilentModeIOS: true,
-// //         shouldDuckAndroid: true,
-// //         interruptionModeAndroid: 1, // 상수 값을 직접 설정 (1: DO_NOT_MIX)
-// //         playThroughEarpieceAndroid: false,
-// //         staysActiveInBackground: true,
-// //       });
-
-// //       setIsRecord(true);
-
-// //       const recordingInstance = new Audio.Recording();
-// //       await recordingInstance.prepareToRecordAsync({
-// //         android: {
-// //           extension: '.3gp',
-// //           outputFormat: 1, // Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_THREE_GPP
-// //           audioEncoder: 1, // Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AMR_NB
-// //           sampleRate: 16000,
-// //           numberOfChannels: 1,
-// //           bitRate: 96000,
-// //         },
-// //         ios: {
-// //           extension: '.caf',
-// //           audioQuality: 127, // Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH
-// //           sampleRate: 16000,
-// //           numberOfChannels: 1,
-// //           bitRate: 128000,
-// //           linearPCMBitDepth: 16,
-// //           linearPCMIsBigEndian: false,
-// //           linearPCMIsFloat: false,
-// //         },
-// //         web: {
-// //           mimeType: 'audio/webm',
-// //           bitsPerSecond: 128000,
-// //         },
-// //       });
-
-// //       setRecording(recordingInstance);
-// //       await recordingInstance.startAsync(); // 녹음 시작
-// //       console.log('Recording started');
-
-// //       // 1초마다 음성을 전송하는 인터벌 설정
-// //       intervalRef.current = setInterval(sendAudioInChunks, 1000);
-// //     } catch (err) {
-// //       console.error('녹음 시작 실패', err);
-// //     }
-// //   };
-
-// //   // 녹음 중지 함수
-// //   const stopRecording = async () => {
-// //     try {
-// //       if (recording) {
-// //         console.log('Stopping recording...');
-// //         await recording.stopAndUnloadAsync();
-// //         clearInterval(intervalRef.current!); // 인터벌 제거
-// //         intervalRef.current = null; // 초기화
-// //         const uri = recording.getURI();
-// //         console.log('Recording stopped, URI:', uri);
-// //         if (uri) {
-// //           await sendAudioToGoogle(uri); // 마지막으로 남은 음성 전송
-// //         }
-// //       }
-// //       setRecording(null);
-// //       setIsRecord(false);
-// //       onClose(); // 녹음이 끝나면 모달을 닫음
-// //     } catch (err) {
-// //       console.error('녹음 중지 실패', err);
-// //     }
-// //   };
-
-// //   // 모달이 열릴 때 녹음 시작
-// //   useEffect(() => {
-// //     if (isVisible && !isRecord) {
-// //       startRecording(); // 모달이 열리면 바로 녹음을 시작
-// //     }
-// //     return () => {
-// //       // 모달이 닫히면 인터벌 제거
-// //       if (intervalRef.current) {
-// //         clearInterval(intervalRef.current);
-// //         intervalRef.current = null;
-// //       }
-// //     };
-// //   }, [isVisible]);
-
-// //   return (
-// //     <Modal
-// //       isVisible={isVisible}
-// //       onBackdropPress={onClose}
-// //       backdropOpacity={0.5}
-// //     >
-// //       <View style={styles.modalContainer}>
-// //         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-// //           <Text style={styles.closeButtonText}>✕</Text>
-// //         </TouchableOpacity>
-
-// //         <Text style={styles.instructionText}>
-// //           말씀하신 후 마이크를 눌러주세요
-// //         </Text>
-
-// //         <View style={styles.transcriptionContainer}>
-// //           <Text style={styles.transcribedText}>{transcribedText}</Text>
-// //         </View>
-
-// //         <TouchableOpacity
-// //           style={styles.micButton}
-// //           onPress={isRecord ? stopRecording : startRecording}
-// //         >
-// //           <View style={styles.micOuterCircle}>
-// //             <View style={styles.micInnerCircle}>
-// //               <Image
-// //                 source={require('../../assets/images/mike.png')}
-// //                 style={styles.micIcon}
-// //               />
-// //             </View>
-// //           </View>
-// //         </TouchableOpacity>
-// //       </View>
-// //     </Modal>
-// //   );
-// // };
-
-// // const styles = StyleSheet.create({
-// //   modalContainer: {
-// //     backgroundColor: '#fff',
-// //     borderRadius: 10,
-// //     padding: 20,
-// //     alignItems: 'center',
-// //     justifyContent: 'center',
-// //     width: '100%',
-// //     height: '80%',
-// //     alignSelf: 'center',
-// //   },
-// //   closeButton: {
-// //     position: 'absolute',
-// //     top: 20,
-// //     left: 20,
-// //   },
-// //   closeButtonText: {
-// //     fontSize: 25,
-// //     color: '#000',
-// //   },
-// //   instructionText: {
-// //     color: '#333',
-// //     fontSize: 18,
-// //     marginBottom: 20,
-// //   },
-// //   transcriptionContainer: {
-// //     height: 100,
-// //     width: '90%',
-// //     padding: 10,
-// //     backgroundColor: '#F0F0F0',
-// //     borderRadius: 10,
-// //     marginBottom: 20,
-// //     justifyContent: 'center',
-// //     alignItems: 'center',
-// //   },
-// //   transcribedText: {
-// //     color: '#333',
-// //     fontSize: 16,
-// //     textAlign: 'center',
-// //   },
-// //   micButton: {
-// //     alignItems: 'center',
-// //     justifyContent: 'center',
-// //   },
-// //   micOuterCircle: {
-// //     width: 200,
-// //     height: 200,
-// //     borderRadius: 100,
-// //     backgroundColor: '#D3D3D3',
-// //     alignItems: 'center',
-// //     justifyContent: 'center',
-// //   },
-// //   micInnerCircle: {
-// //     width: 150,
-// //     height: 150,
-// //     borderRadius: 75,
-// //     backgroundColor: '#f0f0f0',
-// //     alignItems: 'center',
-// //     justifyContent: 'center',
-// //   },
-// //   micIcon: {
-// //     width: 90,
-// //     height: 90,
-// //     tintColor: '#FF0000',
-// //   },
-// // });
-
-// // export default VoiceInputModal;
-
-// import axios from 'axios';
-// import { Audio } from 'expo-av';
-// import * as FileSystem from 'expo-file-system';
-// import React, { useEffect, useRef, useState } from 'react';
-// import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-// import Modal from 'react-native-modal';
-
-// interface VoiceInputModalProps {
-//   isVisible: boolean;
-//   onClose: () => void;
-// }
-
-// const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
-//   isVisible,
-//   onClose,
-// }) => {
-//   const [recording, setRecording] = useState<Audio.Recording | null>(null); // 녹음 객체 저장
-//   const [transcribedText, setTranscribedText] = useState('음성 인식 중...');
-//   const [isRecord, setIsRecord] = useState(false); // 녹음 상태
-//   const intervalRef = useRef<NodeJS.Timeout | null>(null); // 주기적으로 음성 전송
-
-//   // 일정 주기마다 음성을 전송하는 함수
-//   const sendAudioInChunks = async () => {
-//     if (recording) {
-//       try {
-//         console.log('Sending chunk of audio to Google...');
-//         await recording.stopAndUnloadAsync(); // 현재 녹음 중인 음성을 일시적으로 중지
-//         const uri = recording.getURI();
-//         if (uri) {
-//           await sendAudioToGoogle(uri); // 음성을 전송
-//         }
-//         await recording.startAsync(); // 다시 녹음 시작
-//       } catch (err) {
-//         console.error('음성 전송 실패', err);
-//       }
-//     }
-//   };
-
-//   // Google API로 오디오 전송 함수
-//   const sendAudioToGoogle = async (uri: string) => {
-//     try {
-//       console.log('Sending audio to Google, URI:', uri);
-//       const audioFile = await FileSystem.readAsStringAsync(uri, {
-//         encoding: FileSystem.EncodingType.Base64,
-//       });
-
-//       const apiKey = 'AIzaSyCRBV4NPRexVT_2yjvT1ogr4lxEWNQjMv4'; // 여기에 구글 API 키를 입력
-//       const body = {
-//         config: {
-//           encoding: 'LINEAR16', // LINEAR16으로 설정
-//           sampleRateHertz: 16000,
-//           languageCode: 'ko-KR', // 언어 설정 (한국어)
-//         },
-//         audio: {
-//           content: audioFile,
-//         },
-//       };
-
-//       const response = await axios.post(
-//         `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-//         body,
-//         {
-//           headers: {
-//             'Content-Type': 'application/json',
-//           },
-//         }
-//       );
-
-//       console.log('Google API response:', response.data);
-//       if (response.data && response.data.results) {
-//         const transcription = response.data.results
-//           .map((result: any) => result.alternatives[0].transcript)
-//           .join('\n');
-//         setTranscribedText((prevText) => prevText + ' ' + transcription); // 이전 텍스트에 새로운 텍스트 추가
-//       } else {
-//         setTranscribedText((prevText) => prevText + ' [결과 없음]');
-//       }
-//     } catch (err) {
-//       console.error('Google API error:', err);
-//       setTranscribedText((prevText) => prevText + ' [실패]');
-//     }
-//   };
-
-//   // 녹음 시작 함수
-//   const startRecording = async () => {
-//     try {
-//       console.log('Starting new recording...');
-//       const { status } = await Audio.requestPermissionsAsync();
-//       if (status !== 'granted') {
-//         alert('마이크 권한이 필요합니다.');
-//         return;
-//       }
-
-//       await Audio.setAudioModeAsync({
-//         allowsRecordingIOS: true,
-//         interruptionModeIOS: 1, // 상수 값을 직접 설정 (1: DO_NOT_MIX)
-//         playsInSilentModeIOS: true,
-//         shouldDuckAndroid: true,
-//         interruptionModeAndroid: 1, // 상수 값을 직접 설정 (1: DO_NOT_MIX)
-//         playThroughEarpieceAndroid: false,
-//         staysActiveInBackground: true,
-//       });
-
-//       setIsRecord(true);
-
-//       const recordingInstance = new Audio.Recording();
-//       await recordingInstance.prepareToRecordAsync({
-//         android: {
-//           extension: '.3gp',
-//           outputFormat: 1, // Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_THREE_GPP
-//           audioEncoder: 1, // Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AMR_NB
-//           sampleRate: 16000,
-//           numberOfChannels: 1,
-//           bitRate: 96000,
-//         },
-//         ios: {
-//           extension: '.caf',
-//           audioQuality: 127, // Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH
-//           sampleRate: 16000,
-//           numberOfChannels: 1,
-//           bitRate: 128000,
-//           linearPCMBitDepth: 16,
-//           linearPCMIsBigEndian: false,
-//           linearPCMIsFloat: false,
-//         },
-//         web: {
-//           mimeType: 'audio/webm',
-//           bitsPerSecond: 128000,
-//         },
-//       });
-
-//       setRecording(recordingInstance);
-//       await recordingInstance.startAsync(); // 녹음 시작
-//       console.log('Recording started');
-
-//       // 1초마다 음성을 전송하는 인터벌 설정
-//       intervalRef.current = setInterval(sendAudioInChunks, 1000);
-//     } catch (err) {
-//       console.error('녹음 시작 실패', err);
-//     }
-//   };
-
-//   // 녹음 중지 함수
-//   const stopRecording = async () => {
-//     try {
-//       if (recording) {
-//         console.log('Stopping recording...');
-//         await recording.stopAndUnloadAsync();
-//         clearInterval(intervalRef.current!); // 인터벌 제거
-//         intervalRef.current = null; // 초기화
-//         const uri = recording.getURI();
-//         console.log('Recording stopped, URI:', uri);
-//         if (uri) {
-//           await sendAudioToGoogle(uri); // 마지막으로 남은 음성 전송
-//         }
-//       }
-//       setRecording(null);
-//       setIsRecord(false);
-//       onClose(); // 녹음이 끝나면 모달을 닫음
-//     } catch (err) {
-//       console.error('녹음 중지 실패', err);
-//     }
-//   };
-
-//   // 모달이 열릴 때 녹음 시작
-//   useEffect(() => {
-//     if (isVisible && !isRecord) {
-//       startRecording(); // 모달이 열리면 바로 녹음을 시작
-//     }
-//     return () => {
-//       // 모달이 닫히면 인터벌 제거
-//       if (intervalRef.current) {
-//         clearInterval(intervalRef.current);
-//         intervalRef.current = null;
-//       }
-//     };
-//   }, [isVisible]);
-
-//   return (
-//     <Modal
-//       isVisible={isVisible}
-//       onBackdropPress={onClose}
-//       backdropOpacity={0.5}
-//     >
-//       <View style={styles.modalContainer}>
-//         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-//           <Text style={styles.closeButtonText}>✕</Text>
-//         </TouchableOpacity>
-
-//         <Text style={styles.instructionText}>
-//           말씀하신 내용이 실시간으로 표시됩니다.
-//         </Text>
-
-//         <View style={styles.transcriptionContainer}>
-//           <Text style={styles.transcribedText}>{transcribedText}</Text>
-//         </View>
-//       </View>
-//     </Modal>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   modalContainer: {
-//     backgroundColor: '#fff',
-//     borderRadius: 10,
-//     padding: 20,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     width: '100%',
-//     height: '80%',
-//     alignSelf: 'center',
-//   },
-//   closeButton: {
-//     position: 'absolute',
-//     top: 20,
-//     left: 20,
-//   },
-//   closeButtonText: {
-//     fontSize: 25,
-//     color: '#000',
-//   },
-//   instructionText: {
-//     color: '#333',
-//     fontSize: 18,
-//     marginBottom: 20,
-//   },
-//   transcriptionContainer: {
-//     height: 100,
-//     width: '90%',
-//     padding: 10,
-//     backgroundColor: '#F0F0F0',
-//     borderRadius: 10,
-//     marginBottom: 20,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   transcribedText: {
-//     color: '#333',
-//     fontSize: 16,
-//     textAlign: 'center',
-//   },
-// });
-
-// export default VoiceInputModal;
-
-import axios from 'axios';
-import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import { FontAwesome } from '@expo/vector-icons'; // 마이크 아이콘
+import axios from 'axios'; // HTTP 요청을 위한 axios
+import { Audio } from 'expo-av'; // expo-av 사용
+import * as FileSystem from 'expo-file-system'; // 파일 시스템 사용
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from 'react-native-modal';
+import {
+  Animated,
+  Easing,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface VoiceInputModalProps {
   isVisible: boolean;
   onClose: () => void;
+  onSave: (transcribedText: string) => void; // 저장 함수
+  getVolumeLevel: () => number; // 음량 레벨 반환 함수
 }
 
 const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
   isVisible,
   onClose,
+  onSave,
+  getVolumeLevel,
 }) => {
-  const [recording, setRecording] = useState<Audio.Recording | null>(null); // 녹음 객체 저장
-  const [transcribedText, setTranscribedText] = useState('음성 인식 중...');
-  const [isRecord, setIsRecord] = useState(false); // 녹음 상태
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcribedText, setTranscribedText] = useState(''); // 변환된 텍스트 상태
+  const scaleAnimation = useRef(new Animated.Value(1)).current; // 애니메이션 상태
+  const [volume, setVolume] = useState(1); // 음량 상태
 
-  // 녹음 시작 함수
+  // 음성 녹음 시작
   const startRecording = async () => {
     try {
-      console.log('Starting new recording...');
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        alert('마이크 권한이 필요합니다.');
-        return;
-      }
-
+      await Audio.requestPermissionsAsync(); // 마이크 권한 요청
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
-        interruptionModeIOS: 1,
         playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        interruptionModeAndroid: 1,
-        playThroughEarpieceAndroid: false,
-        staysActiveInBackground: true,
       });
 
-      const recordingInstance = new Audio.Recording();
-      await recordingInstance.prepareToRecordAsync({
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync({
         android: {
           extension: '.3gp',
-          outputFormat: 1,
-          audioEncoder: 1,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 96000,
+          outputFormat: 2, // Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4
+          audioEncoder: 3, // Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC
+          sampleRate: 16000, // 샘플링 레이트
+          numberOfChannels: 1, // 모노
+          bitRate: 96000, // 비트레이트
         },
         ios: {
           extension: '.caf',
-          audioQuality: 127,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 128000,
+          audioQuality: 127, // Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH
+          sampleRate: 16000, // 샘플링 레이트
+          numberOfChannels: 1, // 모노
+          bitRate: 128000, // 비트레이트
           linearPCMBitDepth: 16,
           linearPCMIsBigEndian: false,
           linearPCMIsFloat: false,
@@ -595,207 +65,175 @@ const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
           bitsPerSecond: 128000,
         },
       });
+      await recording.startAsync();
+      setIsRecording(true);
 
-      setRecording(recordingInstance);
-      await recordingInstance.startAsync();
-      setIsRecord(true);
-
-      // 1초마다 음성을 전송하는 인터벌 설정
-      intervalRef.current = setInterval(sendAudioInChunks, 2000);
-    } catch (err) {
-      console.error('녹음 시작 실패', err);
-    }
-  };
-
-  // 녹음 중지 함수
-  const stopRecording = async () => {
-    try {
-      if (recording) {
+      // 음성 인식이 끝나면 자동으로 중지
+      setTimeout(async () => {
         await recording.stopAndUnloadAsync();
-        clearInterval(intervalRef.current!);
-        const uri = recording.getURI();
-        if (uri) {
-          await sendAudioToGoogle(uri);
-        }
-      }
-      setRecording(null);
-      setIsRecord(false);
-      onClose(); // 녹음이 끝나면 모달을 닫음
+        const uri = recording.getURI(); // 파일 URI 획득
+        convertSpeechToText(uri); // 녹음된 파일을 텍스트로 변환
+      }, 5000); // 5초간 녹음 후 자동 중지
     } catch (err) {
-      console.error('녹음 중지 실패', err);
+      console.error('녹음 오류:', err);
     }
   };
 
-  // 일정 주기마다 음성을 전송하는 함수
-  const sendAudioInChunks = async () => {
-    if (recording) {
-      try {
-        const uri = recording.getURI();
-        if (uri) {
-          await sendAudioToGoogle(uri);
-        }
-      } catch (err) {
-        console.error('음성 전송 실패', err);
-      }
+  // Google Speech-to-Text API로 음성 파일 전송하여 텍스트로 변환
+  const convertSpeechToText = async (audioFileUri: string | null) => {
+    if (!audioFileUri) {
+      console.error('유효한 오디오 파일이 아닙니다.');
+      return;
     }
-  };
 
-  // Google API로 오디오 전송 함수
-  const sendAudioToGoogle = async (uri: string) => {
+    const apiKey = 'AIzaSyCRBV4NPRexVT_2yjvT1ogr4lxEWNQjMv4'; // 구글 API 키 입력
+
     try {
-      const audioFile = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+      const base64Audio = await FileSystem.readAsStringAsync(audioFileUri, {
+        encoding: FileSystem.EncodingType.Base64, // Base64로 변환
       });
-
-      const apiKey = 'AIzaSyCRBV4NPRexVT_2yjvT1ogr4lxEWNQjMv4'; // 여기에 구글 API 키를 입력
-      const body = {
-        config: {
-          encoding: 'LINEAR16',
-          sampleRateHertz: 16000,
-          languageCode: 'ko-KR', // 언어 설정 (한국어)
-        },
-        audio: {
-          content: audioFile,
-        },
-      };
 
       const response = await axios.post(
         `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-        body,
         {
-          headers: {
-            'Content-Type': 'application/json',
+          config: {
+            encoding: 'LINEAR16',
+            sampleRateHertz: 16000,
+            languageCode: 'ko-KR', // 한국어 인식
+          },
+          audio: {
+            content: base64Audio,
           },
         }
       );
 
-      if (response.data && response.data.results) {
-        const transcription = response.data.results
-          .map((result: any) => result.alternatives[0].transcript)
-          .join('\n');
-        setTranscribedText((prevText) => prevText + ' ' + transcription); // 실시간으로 텍스트 추가
-      } else {
-        setTranscribedText((prevText) => prevText + ' [결과 없음]');
-      }
-    } catch (err) {
-      console.error('Google API error:', err);
-      setTranscribedText((prevText) => prevText + ' [실패]');
+      const transcription =
+        response.data.results[0]?.alternatives[0]?.transcript ||
+        '음성 인식 실패';
+      setTranscribedText(transcription);
+
+      // 변환된 텍스트를 부모 컴포넌트에 저장
+      setTimeout(() => {
+        onSave(transcription); // 3초 후 저장
+        onClose(); // 모달 닫기
+      }, 3000);
+    } catch (error) {
+      console.error('음성 인식 오류:', error);
     }
   };
 
+  // 애니메이션
+  const animateScale = (volume: number) => {
+    Animated.timing(scaleAnimation, {
+      toValue: 1 + volume * 0.5, // 음량에 따라 애니메이션 범위 설정
+      duration: 100,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // 모달이 열리면 자동으로 녹음 시작 및 음량 감지
   useEffect(() => {
-    if (isVisible && !isRecord) {
-      startRecording(); // 모달이 열리면 바로 녹음을 시작
+    if (isVisible) {
+      startRecording(); // 모달이 열리면 자동 녹음 시작
+      const interval = setInterval(() => {
+        const currentVolume = getVolumeLevel(); // 음량 가져오기
+        setVolume(currentVolume);
+        animateScale(currentVolume); // 음량에 따른 애니메이션 조절
+      }, 100);
+
+      return () => clearInterval(interval); // 모달이 닫히면 음량 감지 중지
     }
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
   }, [isVisible]);
 
   return (
-    <Modal
-      isVisible={isVisible}
-      onBackdropPress={onClose}
-      backdropOpacity={0.5}
-    >
-      <View style={styles.modalContainer}>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeButtonText}>✕</Text>
-        </TouchableOpacity>
+    <Modal visible={isVisible} transparent={true} animationType="slide">
+      <View style={styles.modalBackground}>
+        <View style={styles.modalContainer}>
+          {/* X 버튼 */}
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>X</Text>
+          </TouchableOpacity>
 
-        <Text style={styles.instructionText}>
-          말씀하신 내용이 실시간으로 표시됩니다.
-        </Text>
-
-        <View style={styles.transcriptionContainer}>
-          <Text style={styles.transcribedText}>{transcribedText}</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.micButton}
-          onPress={isRecord ? stopRecording : startRecording}
-        >
-          <View style={styles.micOuterCircle}>
-            <View style={styles.micInnerCircle}>
-              <Image
-                source={require('../../assets/images/mike.png')}
-                style={styles.micIcon}
-              />
+          <Text style={styles.modalTitle}>음성 인식 중...</Text>
+          <View style={styles.centerContainer}>
+            {/* 음량에 따라 원 크기를 변화시키는 애니메이션 */}
+            <Animated.View
+              style={[
+                styles.pulseCircle,
+                {
+                  transform: [{ scale: scaleAnimation }],
+                },
+              ]}
+            />
+            <View style={styles.micContainer}>
+              <View style={styles.innerCircle}>
+                <FontAwesome name="microphone" size={50} color="white" />
+              </View>
             </View>
           </View>
-        </TouchableOpacity>
+
+          <Text>{isRecording ? '녹음 중...' : '녹음 대기 중...'}</Text>
+          {/* 변환된 텍스트 표시 */}
+          {transcribedText && <Text>{transcribedText}</Text>}
+        </View>
       </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    alignItems: 'center',
+  modalBackground: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  },
+  modalContainer: {
     width: '100%',
-    height: '80%',
-    alignSelf: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   closeButton: {
     position: 'absolute',
     top: 20,
     left: 20,
+    zIndex: 10,
   },
   closeButtonText: {
-    fontSize: 25,
-    color: '#000',
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'black',
   },
-  instructionText: {
-    color: '#333',
-    fontSize: 18,
+  modalTitle: {
+    fontSize: 35,
+    color: 'black',
+    marginBottom: 40,
+  },
+  centerContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 20,
   },
-  transcriptionContainer: {
+  pulseCircle: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    borderColor: 'rgba(255, 0, 0, 0.7)',
+    borderWidth: 2,
+  },
+  micContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  innerCircle: {
+    width: 100,
     height: 100,
-    width: '90%',
-    padding: 10,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 10,
-    marginBottom: 20,
+    borderRadius: 50,
+    backgroundColor: 'red',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  transcribedText: {
-    color: '#333',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  micButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  micOuterCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#D3D3D3',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  micInnerCircle: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  micIcon: {
-    width: 90,
-    height: 90,
-    tintColor: '#FF0000',
   },
 });
 
