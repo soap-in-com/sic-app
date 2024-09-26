@@ -228,7 +228,9 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       {/* 삭제 및 취소 버튼을 화면 상단으로 이동 */}
       {deleteMode && (
-        <View style={styles.actionContainer}>
+        <View
+          style={[styles.actionContainer, styles.actionContainerDeleteMode]}
+        >
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
             onPress={deleteSelectedItems}
@@ -304,6 +306,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                           style={[
                             styles.medicineText,
                             medicine.checked && styles.checkedText,
+                            { flexWrap: 'wrap', flexShrink: 1 }, // 추가된 속성
                           ]}
                         >
                           {medicine.label}
@@ -394,6 +397,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                           style={[
                             styles.scheduleText,
                             schedule.checked && styles.checkedText,
+                            { flexWrap: 'wrap', flexShrink: 1 }, // 추가된 속성
                           ]}
                         >
                           {schedule.label}
@@ -557,6 +561,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 10,
   },
+  actionContainerDeleteMode: {
+    marginBottom: 20, // 간격 조정: 삭제 취소 버튼과 금일 복용약 사이의 간격
+  },
   headerWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -639,10 +646,16 @@ const styles = StyleSheet.create({
   medicineText: {
     fontSize: 22, // 텍스트 크기 키움
     fontWeight: 'bold',
+    flexWrap: 'wrap', // 줄바꿈 허용
+    flexShrink: 1, // 텍스트가 줄어들면서 줄바꿈
+    width: '100%', // 부모 컨테이너에 맞게 너비 설정
   },
   scheduleText: {
     fontSize: 22, // 텍스트 크기 키움
     fontWeight: 'bold',
+    flexWrap: 'wrap', // 줄바꿈 허용
+    flexShrink: 1, // 텍스트가 줄어들면서 줄바꿈
+    width: '100%', // 부모 컨테이너에 맞게 너비 설정
   },
   checkedText: {
     textDecorationLine: 'line-through', // 체크된 항목에 가운데 선 추가
