@@ -86,12 +86,8 @@ const ScheduleAndMedicineScreen: React.FC = () => {
       dateData.push({
         date,
         isToday: i === 0, // 오늘 날짜인지 여부
-        medicines: [
-          { label: '종합영양제', checked: false }, // 샘플 복용약
-        ],
-        schedules: [
-          { label: '병원가기', checked: false }, // 샘플 일정
-        ],
+        medicines: [],
+        schedules: [],
       });
     }
     return dateData;
@@ -659,8 +655,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerIcon: {
-    width: 25,
-    height: 25,
+    width: 30,
+    height: 30,
     marginLeft: 5,
     marginBottom: 14, // 아이콘이 텍스트와 일직선에 맞춰지도록 조정
   },
@@ -705,7 +701,7 @@ const styles = StyleSheet.create({
     borderColor: '#1565C0',
   },
   dayHeader: {
-    fontSize: 25,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 0,
   },
@@ -718,16 +714,18 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   medicineItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: -10,
-    paddingVertical: 5, // 높이 키움
+    flexDirection: 'row', // 가로로 배치
+    alignItems: 'center', // 텍스트와 원을 세로로 가운데 정렬
+    justifyContent: 'space-between', // 텍스트와 원을 양 끝에 배치
+    marginBottom: 10, // 항목 간 간격
+    paddingVertical: 10, // 상하 간격을 조금 키움
   },
   scheduleItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: -10,
-    paddingVertical: 5, // 높이 키움
+    flexDirection: 'row', // 가로로 배치
+    alignItems: 'center', // 텍스트와 원을 세로로 가운데 정렬
+    justifyContent: 'space-between', // 텍스트와 원을 양 끝에 배치
+    marginBottom: 10, // 항목 간 간격
+    paddingVertical: 10, // 상하 간격을 조금 키움
   },
   medicineText: {
     fontSize: 25, // 텍스트 크기 키움
@@ -753,7 +751,7 @@ const styles = StyleSheet.create({
     marginRight: 10, // 체크박스 여백 추가
   },
   circleButton: {
-    width: 35, // 요청하신 크기로 변경
+    width: 35,
     height: 35,
     borderRadius: 17.5,
     borderWidth: 2,
@@ -763,20 +761,20 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   circleButtonSelected: {
-    borderColor: '#FF0000', // 선택된 경우 빨간색으로 변경
+    borderColor: '#FF0000',
   },
   circleFill: {
     width: 25, // 내부 원 크기
     height: 25,
     borderRadius: 12.5,
-    backgroundColor: '#FF0000', // 내부 원도 빨간색으로 변경
+    backgroundColor: '#FF0000',
   },
   actionButton: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
-    paddingVertical: 20, // 높이 5 줄임
+    paddingVertical: 20,
     marginHorizontal: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -794,29 +792,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f3c5',
   },
   deleteMainButton: {
-    backgroundColor: '#fec1b9', // 복용약, 일정 삭제 버튼 색상 변경
+    backgroundColor: '#fec1b9',
   },
   deleteButton: {
-    backgroundColor: '#FF6F6F', // 더 연한 빨간색으로 설정
+    backgroundColor: '#FF6F6F',
   },
   cancelButton: {
     backgroundColor: '#f8d7da', // 취소 버튼 색상 설정
   },
   actionButtonText: {
-    color: 'black', // 검정색으로 변경
-    fontWeight: 'bold', // 두껍게 설정
-    fontSize: 28, // 글자 크기 25로 설정
+    color: 'black',
+    fontWeight: 'bold',
+    fontSize: 28,
     marginTop: 8,
   },
   deleteButtonText: {
-    color: 'black', // 글자색 검정으로 변경
-    fontSize: 30, // 글자 크기 키움
-    fontWeight: 'bold', // 글자 두껍게
+    color: 'black',
+    fontSize: 30,
+    fontWeight: 'bold',
   },
   cancelButtonText: {
-    color: 'black', // 취소 버튼 텍스트 검정색
-    fontSize: 30, // 취소 버튼 글자 크기
-    fontWeight: 'bold', // 두껍게
+    color: 'black',
+    fontSize: 30,
+    fontWeight: 'bold',
   },
   disabledButton: {
     opacity: 0.5, // 비활성화 시 투명도 낮춤

@@ -173,12 +173,16 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
                 />
               )}
 
-              <Text style={styles.labelText}>
-                복용약 이름 <Text style={styles.requiredText}>[필수]</Text>
-              </Text>
+              {/* 복용약 이름 */}
+              <View style={styles.inputRow}>
+                <Text style={styles.labelText}>복용약 이름</Text>
+                <View style={styles.requiredBox}>
+                  <Text style={styles.requiredText}>필수</Text>
+                </View>
+              </View>
               {selectedOption === 'text' ? (
                 <TextInput
-                  style={[styles.activeInput, { fontSize: 30 }]} // 글자 크기 30으로 설정
+                  style={[styles.activeInput, { fontSize: 30 }]}
                   placeholder="이름 입력"
                   placeholderTextColor="#aaa"
                   value={inputText}
@@ -192,17 +196,21 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
                   <Text
                     style={{
                       color: inputText ? 'black' : '#aaa',
-                      fontSize: 30, // 음성 입력 텍스트도 30으로 설정
+                      fontSize: 30,
                     }}
                   >
-                    {inputText || '이름 입력'}
+                    {inputText || '음성으로 입력'}
                   </Text>
                 </TouchableOpacity>
               )}
 
-              <Text style={styles.labelText}>
-                복용 날짜 <Text style={styles.requiredText}>[필수]</Text>
-              </Text>
+              {/* 복용 날짜 */}
+              <View style={styles.inputRow}>
+                <Text style={styles.labelText}>복용 날짜</Text>
+                <View style={styles.requiredBox}>
+                  <Text style={styles.requiredText}>필수</Text>
+                </View>
+              </View>
               <TouchableOpacity
                 style={styles.activeInput}
                 onPress={showDatePicker}
@@ -213,7 +221,6 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
                   {dateText || '복용 날짜 선택'}
                 </Text>
               </TouchableOpacity>
-
               <DateTimePickerModal
                 isVisible={isDatePickerVisible}
                 mode="date"
@@ -224,29 +231,36 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
                 cancelTextIOS="취소"
               />
 
-              <Text style={styles.labelText}>
-                시간 <Text style={styles.optionalText}>[선택]</Text>
-              </Text>
-              <TouchableOpacity
-                style={styles.activeInput}
-                onPress={showTimePicker}
-              >
-                <Text
-                  style={{ color: timeText ? 'black' : '#aaa', fontSize: 30 }}
+              {/* 시간 */}
+              <View style={styles.inputRow}>
+                <Text style={styles.labelText}>시간</Text>
+                <View style={styles.optionalBox}>
+                  <Text style={styles.optionalText}>선택</Text>
+                </View>
+              </View>
+              {selectedOption === 'text' ? (
+                <TextInput
+                  style={[styles.activeInput, { fontSize: 30 }]}
+                  placeholder="시간 입력"
+                  placeholderTextColor="#aaa"
+                  value={timeText}
+                  onChangeText={setTimeText}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={styles.activeInput}
+                  onPress={() => toggleVoiceModal('time')}
                 >
-                  {timeText || '시간 선택'}
-                </Text>
-              </TouchableOpacity>
-
-              <DateTimePickerModal
-                isVisible={isTimePickerVisible}
-                mode="time"
-                onConfirm={handleConfirmTime}
-                onCancel={hideTimePicker}
-                locale="ko_KR"
-                confirmTextIOS="저장"
-                cancelTextIOS="취소"
-              />
+                  <Text
+                    style={{
+                      color: timeText ? 'black' : '#aaa',
+                      fontSize: 30,
+                    }}
+                  >
+                    {timeText || '음성으로 시간 입력'}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               <View style={[styles.buttonContainer, { marginTop: -7 }]}>
                 <TouchableOpacity
@@ -295,18 +309,38 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   labelText: {
     fontSize: 30,
     fontWeight: 'bold',
-    marginBottom: 8,
+  },
+  requiredBox: {
+    backgroundColor: 'red',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginLeft: 10,
   },
   requiredText: {
-    color: 'red',
+    color: 'white',
     fontSize: 20,
+    fontWeight: 'bold',
+  },
+  optionalBox: {
+    backgroundColor: 'gray',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginLeft: 10,
   },
   optionalText: {
-    color: 'gray',
+    color: 'white',
     fontSize: 20,
+    fontWeight: 'bold',
   },
   activeInput: {
     borderWidth: 1,
