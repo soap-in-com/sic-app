@@ -1,3 +1,4 @@
+import { Audio } from 'expo-av';
 import React, { useRef, useState } from 'react';
 import {
   Dimensions,
@@ -74,6 +75,8 @@ const ScheduleAndMedicineScreen: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<{
     [date: string]: SelectedItems;
   }>({}); // 선택한 항목 상태
+  const [recording, setRecording] = useState<Audio.Recording | null>(null); // 녹음 객체 상태
+  const [isRecording, setIsRecording] = useState(false); // 녹음 상태 관리
 
   // 날짜 데이터 생성 함수
   function generateDateData(baseDate: Date, numDays: number): DayData[] {
@@ -93,6 +96,62 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     }
     return dateData;
   }
+
+  // 기존 녹음 중지 및 정리
+  const stopExistingRecording = async () => {
+    if (recording) {
+      try {
+        await recording.stopAndUnloadAsync();
+        setRecording(null);
+        setIsRecording(false);
+      } catch (error) {
+        console.error('Stop recording error: ', error);
+      }
+    }
+  };
+
+  // 녹음 시작 함수
+  const startRecording = async () => {
+    try {
+      await stopExistingRecording(); // 기존 녹음이 있으면 정리
+
+      const newRecording = new Audio.Recording();
+      await newRecording.prepareToRecordAsync({
+        android: {
+          extension: '.3gp',
+          outputFormat: 1, // 1: MPEG_4 format
+          audioEncoder: 1, // 1: AAC LC codec
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 96000,
+        },
+        ios: {
+          extension: '.caf',
+          audioQuality: 127, // High quality
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm',
+          bitsPerSecond: 128000,
+        },
+      });
+      await newRecording.startAsync();
+      setRecording(newRecording);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Recording error: ', error);
+    }
+  };
+
+  // 녹음 중지 함수
+  const stopRecording = async () => {
+    await stopExistingRecording(); // 기존 녹음이 있으면 중지
+  };
 
   // 체크박스 토글 함수
   const toggleCheckBox = (
@@ -140,7 +199,6 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     name: string;
     date: string;
     time: string;
-    meal: string;
   }) => {
     const newData = [...dateData];
 
@@ -149,14 +207,8 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     const targetIndex = newData.findIndex((day) => day.date === formattedDate);
 
     if (targetIndex !== -1) {
-      // 시간과 식사 여부가 비어 있으면 ','를 제외하고 이름만 저장
-      const label = `${data.name}${
-        data.time || data.meal
-          ? ` (${data.time || ''}${data.time && data.meal ? ', ' : ''}${
-              data.meal || ''
-            })`
-          : ''
-      }`;
+      // 시간과 이름만 저장
+      const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
 
       newData[targetIndex].medicines.push({
         label: label, // 라벨 생성
@@ -166,6 +218,32 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     }
 
     closeModal(); // 모달 닫기
+  };
+
+  // 일정 저장 후 상태 업데이트 함수
+  const handleSaveSchedule = (data: {
+    name: string;
+    date: string;
+    time: string;
+  }) => {
+    const newData = [...dateData];
+
+    // 날짜 형식이 'YYYY-MM-DD'라면 해당 날짜의 인덱스를 찾음
+    const formattedDate = getFormattedDate(new Date(data.date));
+    const targetIndex = newData.findIndex((day) => day.date === formattedDate);
+
+    if (targetIndex !== -1) {
+      // 시간과 이름만 저장
+      const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
+
+      newData[targetIndex].schedules.push({
+        label: label, // 라벨 생성
+        checked: false,
+      });
+      setDateData(newData); // 상태 업데이트
+    }
+
+    closeScheduleAddModal(); // 일정 추가 모달 닫기
   };
 
   // 메모 모달 열기 함수
@@ -249,7 +327,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
 
           <TouchableOpacity
             style={[styles.actionButton, styles.cancelButton]}
-            onPress={toggleDeleteMode} // 취소하면 삭제 모드 해제
+            onPress={toggleDeleteMode}
           >
             <Text style={styles.cancelButtonText}>취소</Text>
           </TouchableOpacity>
@@ -496,7 +574,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
           <TouchableOpacity
             style={[
               styles.actionButton,
-              styles.deleteMainButton, // 삭제 버튼에 대한 스타일 수정
+              styles.deleteMainButton,
               deleteMode && styles.disabledButton,
             ]}
             onPress={toggleDeleteMode}
@@ -518,7 +596,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
       <RegisterMedicineModal
         visible={modalVisible && modalType === 'medicine'}
         onClose={closeModal}
-        onSave={handleSaveMedicine} // 모달에서 약 저장
+        onSave={handleSaveMedicine}
       />
 
       {/* 메모 모달 */}
@@ -529,16 +607,15 @@ const ScheduleAndMedicineScreen: React.FC = () => {
           console.log('저장된 메모:', memo);
           closeMemoModal();
         }}
+        startRecording={startRecording}
+        stopRecording={stopRecording}
       />
 
       {/* 일정 추가 모달 */}
       <ScheduleAddModal
         visible={scheduleAddModalVisible}
         onClose={closeScheduleAddModal}
-        onSave={(scheduleData) => {
-          console.log('저장된 일정:', scheduleData);
-          closeScheduleAddModal();
-        }}
+        onSave={handleSaveSchedule} // 일정 저장 함수 연결
       />
     </SafeAreaView>
   );
@@ -588,7 +665,7 @@ const styles = StyleSheet.create({
     marginBottom: 14, // 아이콘이 텍스트와 일직선에 맞춰지도록 조정
   },
   sectionHeader: {
-    fontSize: 30,
+    fontSize: 35,
     fontWeight: 'bold',
     marginBottom: 12,
   },
@@ -633,7 +710,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   noScheduleText: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#707070', // 짙은 회색으로 설정
     textAlign: 'center',
@@ -653,14 +730,14 @@ const styles = StyleSheet.create({
     paddingVertical: 5, // 높이 키움
   },
   medicineText: {
-    fontSize: 22, // 텍스트 크기 키움
+    fontSize: 25, // 텍스트 크기 키움
     fontWeight: 'bold',
     flexWrap: 'wrap', // 줄바꿈 허용
     flexShrink: 1, // 텍스트가 줄어들면서 줄바꿈
     width: '100%', // 부모 컨테이너에 맞게 너비 설정
   },
   scheduleText: {
-    fontSize: 22, // 텍스트 크기 키움
+    fontSize: 25, // 텍스트 크기 키움
     fontWeight: 'bold',
     flexWrap: 'wrap', // 줄바꿈 허용
     flexShrink: 1, // 텍스트가 줄어들면서 줄바꿈
@@ -728,7 +805,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: 'black', // 검정색으로 변경
     fontWeight: 'bold', // 두껍게 설정
-    fontSize: 25, // 글자 크기 25로 설정
+    fontSize: 28, // 글자 크기 25로 설정
     marginTop: 8,
   },
   deleteButtonText: {

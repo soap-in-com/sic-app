@@ -1,83 +1,79 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
   Image,
-  PanResponder,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import VoiceInputModal from './voice'; // voice.tsx에서 가져옴
+
 interface MemoModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (memo: string) => void;
+  onSave: (data: { content: string }) => void;
+  startRecording: () => Promise<void>; // 녹음 시작 함수 전달
+  stopRecording: () => Promise<void>; // 녹음 중지 함수 전달
 }
 
-const MemoModal: React.FC<MemoModalProps> = ({ visible, onClose, onSave }) => {
+const MemoModal: React.FC<MemoModalProps> = ({
+  visible,
+  onClose,
+  onSave,
+  startRecording, // props로 녹음 시작 함수 받아옴
+  stopRecording, // props로 녹음 중지 함수 받아옴
+}) => {
   const [selectedOption, setSelectedOption] = useState<'text' | 'voice'>(
     'text'
   );
-  const [memoText, setMemoText] = useState('');
-
-  const [isRecording, setIsRecording] = useState(false);
+  const [contentText, setContentText] = useState('');
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const screenHeight = Dimensions.get('window').height;
   const translateY = useRef(new Animated.Value(screenHeight * 0.85)).current;
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dy) > 5,
-      onPanResponderMove: (_, gestureState) => {
-        const newHeight = screenHeight - gestureState.dy;
-        if (
-          newHeight <= screenHeight * 0.85 &&
-          newHeight >= screenHeight * 0.3
-        ) {
-          translateY.setValue(newHeight);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 200) {
-          onClose();
-        } else {
-          Animated.spring(translateY, {
-            toValue: screenHeight * 0.85,
-            useNativeDriver: false,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
-  const handleMicPress = () => {
-    if (isRecording) {
-      setIsRecording(false);
+  // 모달이 열릴 때마다 상태 초기화
+  useEffect(() => {
+    if (visible) {
+      setContentText(''); // 모달이 열릴 때 필드 초기화
     }
+  }, [visible]);
+
+  // 음성 입력 모달 열기
+  const toggleVoiceModal = async () => {
+    setContentText(''); // 음성 입력 모달이 열릴 때마다 텍스트 초기화
+    await stopRecording(); // 기존 녹음 중지
+    setIsModalVisible(true); // 음성 입력 모달 열기
   };
 
   const handleSave = () => {
-    onSave(memoText);
-    onClose();
+    onSave({
+      content: contentText, // 저장 시 현재 텍스트를 저장
+    });
+    onClose(); // 모달 닫기
   };
 
-  const handleOptionChange = (option: 'text' | 'voice') => {
-    setSelectedOption(option);
-    setMemoText('');
-    setIsRecording(false);
+  const handleSaveVoiceInput = async (text: string) => {
+    setContentText(text); // 음성 입력 결과로 텍스트 덮어쓰기
+    await stopRecording(); // 녹음 중지
+    setIsModalVisible(false); // 음성 입력 완료 후 모달 닫기
   };
 
-  const handleCancel = () => {
-    onClose();
-  };
+  if (!visible) return null; // 모달이 보이지 않으면 아무것도 렌더링하지 않음
 
   return (
-    visible && (
-      <SafeAreaView style={styles.safeArea}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <KeyboardAvoidingView
+        style={styles.safeArea}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Animated.View
           style={[
             styles.modalContainer,
@@ -87,34 +83,32 @@ const MemoModal: React.FC<MemoModalProps> = ({ visible, onClose, onSave }) => {
               bottom: 0,
             },
           ]}
-          {...panResponder.panHandlers}
         >
           <View style={styles.handleBar} />
-
           <View style={styles.content}>
+            {/* 옵션 선택 */}
             <View style={styles.optionContainer}>
               <TouchableOpacity
                 style={[
                   styles.optionButton,
                   selectedOption === 'text' && styles.selectedOption,
                 ]}
-                onPress={() => handleOptionChange('text')}
+                onPress={() => setSelectedOption('text')}
               >
                 <View style={styles.optionContent}>
                   <Image
                     source={require('../../assets/images/text_input_icon.png')}
                     style={styles.optionIcon}
                   />
-                  <Text style={styles.optionText}>직접 입력</Text>
+                  <Text style={styles.optionText}>텍스트 입력</Text>
                 </View>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[
                   styles.optionButton,
                   selectedOption === 'voice' && styles.selectedOption,
                 ]}
-                onPress={() => handleOptionChange('voice')}
+                onPress={() => setSelectedOption('voice')}
               >
                 <View style={styles.optionContent}>
                   <Image
@@ -126,43 +120,41 @@ const MemoModal: React.FC<MemoModalProps> = ({ visible, onClose, onSave }) => {
               </TouchableOpacity>
             </View>
 
-            {selectedOption === 'voice' && (
-              <View style={styles.micContainer}>
-                <TouchableOpacity onPress={handleMicPress}>
-                  <Image
-                    source={require('../../assets/images/mike.png')}
-                    style={styles.micIcon}
-                  />
-                </TouchableOpacity>
-                {isRecording && (
-                  <Text style={styles.micStatusText}>녹음 중입니다</Text>
-                )}
-              </View>
+            {/* 음성 입력 모달 */}
+            {isModalVisible && (
+              <VoiceInputModal
+                isVisible={isModalVisible}
+                onClose={() => setIsModalVisible(false)}
+                onSave={handleSaveVoiceInput}
+                getVolumeLevel={() => Math.random()} // 임시로 음량 레벨 반환
+              />
             )}
 
-            <Text style={styles.labelText}>메모 내용</Text>
+            <Text style={styles.labelText}>
+              메모 내용 <Text style={styles.requiredText}>[필수]</Text>
+            </Text>
             {selectedOption === 'text' ? (
               <TextInput
-                style={styles.activeInput}
-                placeholder="메모를 입력하세요"
-                value={memoText}
-                onChangeText={setMemoText}
+                style={[styles.activeInput, { fontSize: 30, minHeight: 400 }]} // 세로 길이 400으로 설정
+                placeholder="내용 입력"
+                placeholderTextColor="#aaa"
+                value={contentText}
+                onChangeText={setContentText}
                 multiline
+                returnKeyType="default"
               />
             ) : (
               <TouchableOpacity
-                style={styles.activeInput}
-                onPress={() => setIsRecording(true)}
+                style={[styles.activeInput, { minHeight: 400 }]} // 세로 길이 400으로 설정
+                onPress={toggleVoiceModal}
               >
                 <Text
                   style={{
-                    color: memoText ? 'black' : '#aaa',
-                    fontSize: 20,
+                    color: contentText ? 'black' : '#aaa',
+                    fontSize: 30,
                   }}
                 >
-                  {isRecording
-                    ? '말씀 하신 후 마이크를 눌러 정지하세요.'
-                    : memoText || '메모를 입력하세요'}
+                  {contentText || '내용 입력'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -170,7 +162,10 @@ const MemoModal: React.FC<MemoModalProps> = ({ visible, onClose, onSave }) => {
             <View style={[styles.buttonContainer, { marginTop: -7 }]}>
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={handleCancel}
+                onPress={() => {
+                  setContentText(''); // 취소 시 필드 초기화
+                  onClose();
+                }}
               >
                 <Text style={styles.buttonText}>취소</Text>
               </TouchableOpacity>
@@ -180,8 +175,8 @@ const MemoModal: React.FC<MemoModalProps> = ({ visible, onClose, onSave }) => {
             </View>
           </View>
         </Animated.View>
-      </SafeAreaView>
-    )
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -193,7 +188,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
   handleBar: {
@@ -209,20 +203,24 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   labelText: {
-    fontSize: 20,
+    fontSize: 30,
     fontWeight: 'bold',
     marginBottom: 8,
+  },
+  requiredText: {
+    color: 'red',
+    fontSize: 20,
   },
   activeInput: {
     borderWidth: 1,
     borderColor: '#007BFF',
     borderRadius: 25,
-    padding: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 18,
     marginBottom: 15,
     backgroundColor: '#fff',
     textAlign: 'left',
-    fontSize: 20,
-    minHeight: 100, // 메모 작성 공간을 늘리기 위해 추가
+    minHeight: 400, // 내용 입력 칸의 세로 길이 설정
   },
   optionContainer: {
     flexDirection: 'row',
@@ -237,6 +235,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 10,
     marginHorizontal: 5,
+    minHeight: 60,
   },
   optionContent: {
     alignItems: 'center',
@@ -247,26 +246,12 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   optionText: {
-    fontSize: 20,
+    fontSize: 30,
     fontWeight: 'bold',
   },
   selectedOption: {
     borderColor: '#007BFF',
     borderWidth: 2,
-  },
-  micContainer: {
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  micStatusText: {
-    marginTop: 10,
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007BFF',
-  },
-  micIcon: {
-    width: 100,
-    height: 100,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -292,7 +277,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 20,
+    fontSize: 35,
   },
 });
 

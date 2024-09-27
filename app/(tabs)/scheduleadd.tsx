@@ -1,26 +1,410 @@
-import React, { useRef, useState } from 'react';
+// import React, { useEffect, useRef, useState } from 'react';
+// import {
+//   Animated,
+//   Dimensions,
+//   Image,
+//   Keyboard,
+//   SafeAreaView,
+//   StyleSheet,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   TouchableWithoutFeedback,
+//   View,
+// } from 'react-native';
+// import DateTimePickerModal from 'react-native-modal-datetime-picker';
+// import VoiceInputModal from './voice';
+
+// interface ScheduleAddModalProps {
+//   visible: boolean;
+//   onClose: () => void;
+//   onSave: (data: { name: string; date: string; time: string }) => void;
+// }
+
+// const ScheduleAddModal: React.FC<ScheduleAddModalProps> = ({
+//   visible,
+//   onClose,
+//   onSave,
+// }) => {
+//   const [selectedOption, setSelectedOption] = useState<'text' | 'voice'>(
+//     'text'
+//   );
+//   const [inputText, setInputText] = useState('');
+//   const [tempInputText, setTempInputText] = useState('');
+//   const [dateText, setDateText] = useState('');
+//   const [timeText, setTimeText] = useState('');
+//   const [isModalVisible, setIsModalVisible] = useState(false);
+//   const [modalField, setModalField] = useState<'name' | 'time' | null>(null);
+//   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+//   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
+
+//   const screenHeight = Dimensions.get('window').height;
+//   const translateY = useRef(new Animated.Value(screenHeight * 0.85)).current;
+
+//   // 모달이 닫힐 때 상태 초기화 함수
+//   const resetFields = () => {
+//     setInputText('');
+//     setDateText('');
+//     setTimeText('');
+//   };
+
+//   // 모달이 열릴 때마다 상태 초기화
+//   useEffect(() => {
+//     if (visible) {
+//       resetFields(); // 모달이 열릴 때 필드 초기화
+//     }
+//   }, [visible]);
+
+//   const toggleVoiceModal = (field: 'name' | 'time') => {
+//     setModalField(field);
+//     setIsModalVisible(true);
+//     setTempInputText(''); // 음성 인식 시 텍스트 초기화
+//   };
+
+//   const handleSave = () => {
+//     onSave({
+//       name: inputText,
+//       date: dateText,
+//       time: timeText,
+//     });
+//     onClose(); // 모달 닫기
+//   };
+
+//   const handleSaveVoiceInput = (text: string) => {
+//     if (modalField === 'name') {
+//       setInputText(text);
+//     } else if (modalField === 'time') {
+//       setTimeText(text);
+//     }
+//     setIsModalVisible(false); // 음성 입력 완료 후 모달 닫기
+//   };
+
+//   const showDatePicker = () => {
+//     setDatePickerVisibility(true);
+//   };
+
+//   const hideDatePicker = () => {
+//     setDatePickerVisibility(false);
+//   };
+
+//   const handleConfirmDate = (date: Date) => {
+//     const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1)
+//       .toString()
+//       .padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+//     setDateText(formattedDate);
+//     hideDatePicker();
+//   };
+
+//   const showTimePicker = () => {
+//     setTimePickerVisibility(true);
+//   };
+
+//   const hideTimePicker = () => {
+//     setTimePickerVisibility(false);
+//   };
+
+//   const handleConfirmTime = (time: Date) => {
+//     const formattedTime = `${time.getHours().toString().padStart(2, '0')}:${time
+//       .getMinutes()
+//       .toString()
+//       .padStart(2, '0')}`;
+//     setTimeText(formattedTime);
+//     hideTimePicker();
+//   };
+
+//   if (!visible) return null; // 모달이 보이지 않으면 아무것도 렌더링하지 않음
+
+//   return (
+//     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+//       {/* 하나의 View로 감싸줌 */}
+//       <View>
+//         <SafeAreaView style={styles.safeArea}>
+//           <Animated.View
+//             style={[
+//               styles.modalContainer,
+//               {
+//                 height: translateY,
+//                 position: 'absolute',
+//                 bottom: 0,
+//               },
+//             ]}
+//           >
+//             <View style={styles.handleBar} />
+
+//             <View style={styles.content}>
+//               <View style={styles.optionContainer}>
+//                 <TouchableOpacity
+//                   style={[
+//                     styles.optionButton,
+//                     selectedOption === 'text' && styles.selectedOption,
+//                   ]}
+//                   onPress={() => setSelectedOption('text')}
+//                 >
+//                   <View style={styles.optionContent}>
+//                     <Image
+//                       source={require('../../assets/images/text_input_icon.png')}
+//                       style={styles.optionIcon}
+//                     />
+//                     <Text style={styles.optionText}>직접 입력</Text>
+//                   </View>
+//                 </TouchableOpacity>
+
+//                 <TouchableOpacity
+//                   style={[
+//                     styles.optionButton,
+//                     selectedOption === 'voice' && styles.selectedOption,
+//                   ]}
+//                   onPress={() => setSelectedOption('voice')}
+//                 >
+//                   <View style={styles.optionContent}>
+//                     <Image
+//                       source={require('../../assets/images/mike.png')}
+//                       style={styles.optionIcon}
+//                     />
+//                     <Text style={styles.optionText}>음성으로 입력</Text>
+//                   </View>
+//                 </TouchableOpacity>
+//               </View>
+
+//               {/* VoiceInputModal 사용 */}
+//               {isModalVisible && (
+//                 <VoiceInputModal
+//                   isVisible={isModalVisible}
+//                   onClose={() => setIsModalVisible(false)}
+//                   onSave={handleSaveVoiceInput}
+//                   getVolumeLevel={() => Math.random()} // 임시로 음량 레벨 반환
+//                 />
+//               )}
+
+//               <Text style={styles.labelText}>
+//                 일정 이름 <Text style={styles.requiredText}>[필수]</Text>
+//               </Text>
+//               {selectedOption === 'text' ? (
+//                 <TextInput
+//                   style={[styles.activeInput, { fontSize: 30 }]} // 글자 크기 30으로 설정
+//                   placeholder="일정 이름 입력"
+//                   placeholderTextColor="#aaa"
+//                   value={inputText}
+//                   onChangeText={setInputText}
+//                 />
+//               ) : (
+//                 <TouchableOpacity
+//                   style={styles.activeInput}
+//                   onPress={() => toggleVoiceModal('name')}
+//                 >
+//                   <Text
+//                     style={{
+//                       color: inputText ? 'black' : '#aaa',
+//                       fontSize: 30, // 음성 입력 텍스트도 30으로 설정
+//                     }}
+//                   >
+//                     {inputText || '일정 이름 입력'}
+//                   </Text>
+//                 </TouchableOpacity>
+//               )}
+
+//               <Text style={styles.labelText}>
+//                 일정 날짜 <Text style={styles.requiredText}>[필수]</Text>
+//               </Text>
+//               <TouchableOpacity
+//                 style={styles.activeInput}
+//                 onPress={showDatePicker}
+//               >
+//                 <Text
+//                   style={{ color: dateText ? 'black' : '#aaa', fontSize: 30 }}
+//                 >
+//                   {dateText || '일정 날짜 선택'}
+//                 </Text>
+//               </TouchableOpacity>
+
+//               <DateTimePickerModal
+//                 isVisible={isDatePickerVisible}
+//                 mode="date"
+//                 onConfirm={handleConfirmDate}
+//                 onCancel={hideDatePicker}
+//                 locale="ko_KR"
+//                 confirmTextIOS="저장"
+//                 cancelTextIOS="취소"
+//               />
+
+//               <Text style={styles.labelText}>
+//                 시간 <Text style={styles.optionalText}>[선택]</Text>
+//               </Text>
+//               <TouchableOpacity
+//                 style={styles.activeInput}
+//                 onPress={showTimePicker}
+//               >
+//                 <Text
+//                   style={{ color: timeText ? 'black' : '#aaa', fontSize: 30 }}
+//                 >
+//                   {timeText || '시간 선택'}
+//                 </Text>
+//               </TouchableOpacity>
+
+//               <DateTimePickerModal
+//                 isVisible={isTimePickerVisible}
+//                 mode="time"
+//                 onConfirm={handleConfirmTime}
+//                 onCancel={hideTimePicker}
+//                 locale="ko_KR"
+//                 confirmTextIOS="저장"
+//                 cancelTextIOS="취소"
+//               />
+
+//               <View style={[styles.buttonContainer, { marginTop: -7 }]}>
+//                 <TouchableOpacity
+//                   style={styles.cancelButton}
+//                   onPress={() => {
+//                     resetFields(); // 취소 시 필드 초기화
+//                     onClose();
+//                   }} // 취소 버튼 클릭 시 모달 닫기 및 필드 초기화
+//                 >
+//                   <Text style={styles.buttonText}>취소</Text>
+//                 </TouchableOpacity>
+//                 <TouchableOpacity
+//                   style={styles.saveButton}
+//                   onPress={handleSave}
+//                 >
+//                   <Text style={styles.buttonText}>저장</Text>
+//                 </TouchableOpacity>
+//               </View>
+//             </View>
+//           </Animated.View>
+//         </SafeAreaView>
+//       </View>
+//     </TouchableWithoutFeedback>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+//   // 스타일 설정
+//   safeArea: {
+//     flex: 1,
+//     justifyContent: 'flex-end',
+//   },
+//   modalContainer: {
+//     width: '100%',
+//     backgroundColor: '#fff',
+//     borderTopRightRadius: 20,
+//   },
+//   handleBar: {
+//     width: 50,
+//     height: 5,
+//     backgroundColor: '#ccc',
+//     borderRadius: 2.5,
+//     alignSelf: 'center',
+//     marginVertical: 10,
+//   },
+//   content: {
+//     flex: 1,
+//     padding: 20,
+//   },
+//   labelText: {
+//     fontSize: 30,
+//     fontWeight: 'bold',
+//     marginBottom: 8,
+//   },
+//   requiredText: {
+//     color: 'red',
+//     fontSize: 20,
+//   },
+//   optionalText: {
+//     color: 'gray',
+//     fontSize: 20,
+//   },
+//   activeInput: {
+//     borderWidth: 1,
+//     borderColor: '#007BFF',
+//     borderRadius: 25,
+//     paddingHorizontal: 15,
+//     paddingVertical: 18,
+//     marginBottom: 15,
+//     backgroundColor: '#fff',
+//     textAlign: 'left',
+//     minHeight: 60,
+//   },
+//   optionContainer: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     width: '100%',
+//     marginBottom: 20,
+//   },
+//   optionButton: {
+//     flex: 1,
+//     backgroundColor: '#F0F0F0',
+//     paddingVertical: 10,
+//     alignItems: 'center',
+//     borderRadius: 10,
+//     marginHorizontal: 5,
+//     minHeight: 60,
+//   },
+//   optionContent: {
+//     alignItems: 'center',
+//   },
+//   optionIcon: {
+//     width: 50,
+//     height: 50,
+//     marginBottom: 5,
+//   },
+//   optionText: {
+//     fontSize: 30,
+//     fontWeight: 'bold',
+//   },
+//   selectedOption: {
+//     borderColor: '#007BFF',
+//     borderWidth: 2,
+//   },
+//   buttonContainer: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     marginTop: 20,
+//   },
+//   cancelButton: {
+//     flex: 1,
+//     backgroundColor: '#ccc',
+//     paddingVertical: 12,
+//     borderRadius: 25,
+//     marginHorizontal: 5,
+//     alignItems: 'center',
+//   },
+//   saveButton: {
+//     flex: 1,
+//     backgroundColor: '#007BFF',
+//     paddingVertical: 12,
+//     borderRadius: 25,
+//     marginHorizontal: 5,
+//     alignItems: 'center',
+//   },
+//   buttonText: {
+//     color: 'white',
+//     fontWeight: 'bold',
+//     fontSize: 35,
+//   },
+// });
+
+// export default ScheduleAddModal;
+
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
   Image,
-  PanResponder,
+  Keyboard,
+  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import VoiceInputModal from './voice';
 
 interface ScheduleAddModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (data: {
-    name: string;
-    date: string;
-    time: string;
-    meal: string;
-  }) => void;
+  onSave: (data: { name: string; date: string; time: string }) => void;
 }
 
 const ScheduleAddModal: React.FC<ScheduleAddModalProps> = ({
@@ -34,267 +418,249 @@ const ScheduleAddModal: React.FC<ScheduleAddModalProps> = ({
   const [inputText, setInputText] = useState('');
   const [dateText, setDateText] = useState('');
   const [timeText, setTimeText] = useState('');
-  const [mealText, setMealText] = useState('');
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [isDateEnabled, setIsDateEnabled] = useState(false);
-  const [isTimeEnabled, setIsTimeEnabled] = useState(false);
-  const [isMealEnabled, setIsMealEnabled] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalField, setModalField] = useState<'name' | 'time' | null>(null);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
 
   const screenHeight = Dimensions.get('window').height;
   const translateY = useRef(new Animated.Value(screenHeight * 0.85)).current;
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dy) > 5,
-      onPanResponderMove: (_, gestureState) => {
-        const newHeight = screenHeight - gestureState.dy;
-        if (
-          newHeight <= screenHeight * 0.85 &&
-          newHeight >= screenHeight * 0.3
-        ) {
-          translateY.setValue(newHeight);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 200) {
-          onClose();
-        } else {
-          Animated.spring(translateY, {
-            toValue: screenHeight * 0.85,
-            useNativeDriver: false,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
-  const handleEnableInput = (inputType: 'name' | 'date' | 'time' | 'meal') => {
-    setIsRecording(true);
-    if (inputType === 'name') {
-      setIsDateEnabled(false);
-      setIsTimeEnabled(false);
-      setIsMealEnabled(false);
-    } else if (inputType === 'date' && !isRecording) {
-      setIsDateEnabled(true);
-    } else if (inputType === 'time' && !isRecording) {
-      setIsTimeEnabled(true);
-    } else if (inputType === 'meal' && !isRecording) {
-      setIsMealEnabled(true);
-    }
-  };
-
-  const handleMicPress = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      if (isDateEnabled === false) {
-        setIsDateEnabled(true);
-      } else if (isTimeEnabled === false) {
-        setIsTimeEnabled(true);
-      } else if (isMealEnabled === false) {
-        setIsMealEnabled(true);
-      }
-    }
-  };
-
-  const handleSave = () => {
-    onSave({ name: inputText, date: dateText, time: timeText, meal: mealText });
-    onClose();
-  };
-
-  const handleOptionChange = (option: 'text' | 'voice') => {
-    setSelectedOption(option);
+  // 모달이 닫힐 때 상태 초기화 함수
+  const resetFields = () => {
     setInputText('');
     setDateText('');
     setTimeText('');
-    setMealText('');
-    setIsDateEnabled(false);
-    setIsTimeEnabled(false);
-    setIsMealEnabled(false);
-    setIsRecording(false);
   };
 
-  const handleCancel = () => {
-    onClose();
+  // 모달이 열릴 때마다 상태 초기화
+  useEffect(() => {
+    if (visible) {
+      resetFields(); // 모달이 열릴 때 필드 초기화
+    }
+  }, [visible]);
+
+  const toggleVoiceModal = (field: 'name' | 'time') => {
+    setModalField(field);
+    setIsModalVisible(true);
   };
+
+  const handleSave = () => {
+    onSave({
+      name: inputText,
+      date: dateText,
+      time: timeText,
+    });
+    onClose(); // 모달 닫기
+  };
+
+  const handleSaveVoiceInput = (text: string) => {
+    if (modalField === 'name') {
+      setInputText(text);
+    } else if (modalField === 'time') {
+      setTimeText(text);
+    }
+    setIsModalVisible(false); // 음성 입력 완료 후 모달 닫기
+  };
+
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
+  };
+
+  const hideDatePicker = () => {
+    setDatePickerVisibility(false);
+  };
+
+  const handleConfirmDate = (date: Date) => {
+    const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    setDateText(formattedDate);
+    hideDatePicker();
+  };
+
+  const showTimePicker = () => {
+    setTimePickerVisibility(true);
+  };
+
+  const hideTimePicker = () => {
+    setTimePickerVisibility(false);
+  };
+
+  const handleConfirmTime = (time: Date) => {
+    const formattedTime = `${time.getHours().toString().padStart(2, '0')}:${time
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}`;
+    setTimeText(formattedTime);
+    hideTimePicker();
+  };
+
+  if (!visible) return null; // 모달이 보이지 않으면 아무것도 렌더링하지 않음
 
   return (
-    visible && (
-      <SafeAreaView style={styles.safeArea}>
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              height: translateY,
-              position: 'absolute',
-              bottom: 0,
-            },
-          ]}
-          {...panResponder.panHandlers}
-        >
-          <View style={styles.handleBar} />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View>
+        <SafeAreaView style={styles.safeArea}>
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                height: translateY,
+                position: 'absolute',
+                bottom: 0,
+              },
+            ]}
+          >
+            <View style={styles.handleBar} />
 
-          <View style={styles.content}>
-            <View style={styles.optionContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.optionButton,
-                  selectedOption === 'text' && styles.selectedOption,
-                ]}
-                onPress={() => handleOptionChange('text')}
-              >
-                <View style={styles.optionContent}>
-                  <Image
-                    source={require('../../assets/images/text_input_icon.png')}
-                    style={styles.optionIcon}
-                  />
-                  <Text style={styles.optionText}>직접 입력</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.optionButton,
-                  selectedOption === 'voice' && styles.selectedOption,
-                ]}
-                onPress={() => handleOptionChange('voice')}
-              >
-                <View style={styles.optionContent}>
-                  <Image
-                    source={require('../../assets/images/mike.png')}
-                    style={styles.optionIcon}
-                  />
-                  <Text style={styles.optionText}>음성으로 입력</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {selectedOption === 'voice' && (
-              <View style={styles.micContainer}>
-                <TouchableOpacity onPress={handleMicPress}>
-                  <Image
-                    source={require('../../assets/images/mike.png')}
-                    style={styles.micIcon}
-                  />
+            <View style={styles.content}>
+              <View style={styles.optionContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.optionButton,
+                    selectedOption === 'text' && styles.selectedOption,
+                  ]}
+                  onPress={() => setSelectedOption('text')}
+                >
+                  <View style={styles.optionContent}>
+                    <Image
+                      source={require('../../assets/images/text_input_icon.png')}
+                      style={styles.optionIcon}
+                    />
+                    <Text style={styles.optionText}>직접 입력</Text>
+                  </View>
                 </TouchableOpacity>
-                {isRecording && (
-                  <Text style={styles.micStatusText}>녹음 중입니다</Text>
-                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.optionButton,
+                    selectedOption === 'voice' && styles.selectedOption,
+                  ]}
+                  onPress={() => setSelectedOption('voice')}
+                >
+                  <View style={styles.optionContent}>
+                    <Image
+                      source={require('../../assets/images/mike.png')}
+                      style={styles.optionIcon}
+                    />
+                    <Text style={styles.optionText}>음성으로 입력</Text>
+                  </View>
+                </TouchableOpacity>
               </View>
-            )}
 
-            <Text style={styles.labelText}>
-              일정 이름 {/* 음성 모드일 때 텍스트 변경 */}
-            </Text>
-            {selectedOption === 'text' ? (
-              <TextInput
+              {/* VoiceInputModal 사용 */}
+              {isModalVisible && (
+                <VoiceInputModal
+                  isVisible={isModalVisible}
+                  onClose={() => setIsModalVisible(false)}
+                  onSave={handleSaveVoiceInput}
+                  getVolumeLevel={() => Math.random()} // 임시로 음량 레벨 반환
+                />
+              )}
+
+              <Text style={styles.labelText}>
+                일정 이름 <Text style={styles.requiredText}>[필수]</Text>
+              </Text>
+              {selectedOption === 'text' ? (
+                <TextInput
+                  style={[styles.activeInput, { fontSize: 30 }]} // 글자 크기 30으로 설정
+                  placeholder="일정 이름 입력"
+                  placeholderTextColor="#aaa"
+                  value={inputText}
+                  onChangeText={setInputText}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={styles.activeInput}
+                  onPress={() => toggleVoiceModal('name')}
+                >
+                  <Text
+                    style={{
+                      color: inputText ? 'black' : '#aaa',
+                      fontSize: 30, // 음성 입력 텍스트도 30으로 설정
+                    }}
+                  >
+                    {inputText || '일정 이름 입력'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <Text style={styles.labelText}>
+                일정 날짜 <Text style={styles.requiredText}>[필수]</Text>
+              </Text>
+              <TouchableOpacity
                 style={styles.activeInput}
-                placeholder="이름 입력"
-                value={inputText}
-                onChangeText={setInputText}
+                onPress={showDatePicker}
+              >
+                <Text
+                  style={{ color: dateText ? 'black' : '#aaa', fontSize: 30 }}
+                >
+                  {dateText || '일정 날짜 선택'}
+                </Text>
+              </TouchableOpacity>
+
+              <DateTimePickerModal
+                isVisible={isDatePickerVisible}
+                mode="date"
+                onConfirm={handleConfirmDate}
+                onCancel={hideDatePicker}
+                locale="ko_KR"
+                confirmTextIOS="저장"
+                cancelTextIOS="취소"
               />
-            ) : (
+
+              <Text style={styles.labelText}>
+                시간 <Text style={styles.optionalText}>[선택]</Text>
+              </Text>
               <TouchableOpacity
                 style={styles.activeInput}
-                onPress={() => handleEnableInput('name')}
+                onPress={showTimePicker}
               >
                 <Text
-                  style={{
-                    color: inputText ? 'black' : '#aaa',
-                    fontSize: 20,
-                  }}
+                  style={{ color: timeText ? 'black' : '#aaa', fontSize: 30 }}
                 >
-                  {isRecording
-                    ? '말씀 하신 후 마이크를 눌러 정지하세요.'
-                    : inputText || '이름 입력 버튼'}
+                  {timeText || '시간 선택'}
                 </Text>
               </TouchableOpacity>
-            )}
 
-            <Text style={styles.labelText}>일정 날짜</Text>
-            {selectedOption === 'text' ? (
-              <TextInput
-                style={
-                  isDateEnabled ? styles.activeInput : styles.disabledInput
-                }
-                placeholder="날짜 입력"
-                value={dateText}
-                onChangeText={setDateText}
-                editable={isDateEnabled}
+              <DateTimePickerModal
+                isVisible={isTimePickerVisible}
+                mode="time"
+                onConfirm={handleConfirmTime}
+                onCancel={hideTimePicker}
+                locale="ko_KR"
+                confirmTextIOS="저장"
+                cancelTextIOS="취소"
               />
-            ) : (
-              <TouchableOpacity
-                style={
-                  isDateEnabled ? styles.activeInput : styles.disabledInput
-                }
-                onPress={() => handleEnableInput('date')}
-                disabled={!isDateEnabled}
-              >
-                <Text
-                  style={{
-                    color: dateText ? 'black' : '#aaa',
-                    fontSize: 20,
-                  }}
-                >
-                  {isRecording
-                    ? '말씀 하신 후 마이크를 눌러 정지하세요.'
-                    : dateText || '일정 날짜 버튼'}
-                </Text>
-              </TouchableOpacity>
-            )}
 
-            <Text style={styles.labelText}>시간</Text>
-            {selectedOption === 'text' ? (
-              <TextInput
-                style={
-                  isTimeEnabled ? styles.activeInput : styles.disabledInput
-                }
-                placeholder="시간 입력"
-                value={timeText}
-                onChangeText={setTimeText}
-                editable={isTimeEnabled}
-              />
-            ) : (
-              <TouchableOpacity
-                style={
-                  isTimeEnabled ? styles.activeInput : styles.disabledInput
-                }
-                onPress={() => handleEnableInput('time')}
-                disabled={!isTimeEnabled}
-              >
-                <Text
-                  style={{
-                    color: timeText ? 'black' : '#aaa',
-                    fontSize: 20,
-                  }}
+              <View style={[styles.buttonContainer, { marginTop: -7 }]}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    resetFields(); // 취소 시 필드 초기화
+                    onClose();
+                  }} // 취소 버튼 클릭 시 모달 닫기 및 필드 초기화
                 >
-                  {isRecording
-                    ? '말씀 하신 후 마이크를 눌러 정지하세요.'
-                    : timeText || '시간 버튼'}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <View style={[styles.buttonContainer, { marginTop: -7 }]}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={handleCancel}
-              >
-                <Text style={styles.buttonText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                <Text style={styles.buttonText}>저장</Text>
-              </TouchableOpacity>
+                  <Text style={styles.buttonText}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSave}
+                >
+                  <Text style={styles.buttonText}>저장</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </Animated.View>
-      </SafeAreaView>
-    )
+          </Animated.View>
+        </SafeAreaView>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
 const styles = StyleSheet.create({
+  // 스타일 설정
   safeArea: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -302,7 +668,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
   handleBar: {
@@ -318,30 +683,28 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   labelText: {
-    fontSize: 20,
+    fontSize: 30,
     fontWeight: 'bold',
     marginBottom: 8,
+  },
+  requiredText: {
+    color: 'red',
+    fontSize: 20,
+  },
+  optionalText: {
+    color: 'gray',
+    fontSize: 20,
   },
   activeInput: {
     borderWidth: 1,
     borderColor: '#007BFF',
     borderRadius: 25,
-    padding: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 18,
     marginBottom: 15,
     backgroundColor: '#fff',
     textAlign: 'left',
-    fontSize: 20,
-  },
-  disabledInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 25,
-    padding: 12,
-    marginBottom: 15,
-    backgroundColor: '#f0f0f0',
-    textAlign: 'left',
-    color: '#888',
-    fontSize: 20,
+    minHeight: 60,
   },
   optionContainer: {
     flexDirection: 'row',
@@ -356,6 +719,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 10,
     marginHorizontal: 5,
+    minHeight: 60,
   },
   optionContent: {
     alignItems: 'center',
@@ -366,26 +730,12 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   optionText: {
-    fontSize: 20,
+    fontSize: 30,
     fontWeight: 'bold',
   },
   selectedOption: {
     borderColor: '#007BFF',
     borderWidth: 2,
-  },
-  micContainer: {
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  micStatusText: {
-    marginTop: 10,
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007BFF',
-  },
-  micIcon: {
-    width: 100,
-    height: 100,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -411,7 +761,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 20,
+    fontSize: 35,
   },
 });
 
