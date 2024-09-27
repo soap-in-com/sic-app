@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -45,6 +45,21 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
 
   const screenHeight = Dimensions.get('window').height;
   const translateY = useRef(new Animated.Value(screenHeight * 0.85)).current;
+
+  // 모달이 닫힐 때 상태 초기화 함수
+  const resetFields = () => {
+    setInputText('');
+    setDateText('');
+    setTimeText('');
+    setMealText('');
+  };
+
+  // 모달이 열릴 때마다 상태 초기화
+  useEffect(() => {
+    if (visible) {
+      resetFields(); // 모달이 열릴 때 필드 초기화
+    }
+  }, [visible]);
 
   const toggleVoiceModal = (field: 'name' | 'time' | 'meal') => {
     setModalField(field);
@@ -155,7 +170,7 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
           </Text>
           {selectedOption === 'text' ? (
             <TextInput
-              style={styles.activeInput}
+              style={[styles.activeInput, { fontSize: 30 }]} // 글자 크기 35로 설정
               placeholder="이름 입력"
               placeholderTextColor="#aaa"
               value={inputText}
@@ -169,7 +184,7 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
               <Text
                 style={{
                   color: inputText ? 'black' : '#aaa',
-                  fontSize: 20,
+                  fontSize: 30, // 음성 입력 텍스트도 35로 설정
                 }}
               >
                 {inputText || '이름 입력'}
@@ -181,7 +196,7 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
             복용 날짜 <Text style={styles.requiredText}>[필수]</Text>
           </Text>
           <TouchableOpacity style={styles.activeInput} onPress={showDatePicker}>
-            <Text style={{ color: dateText ? 'black' : '#aaa', fontSize: 20 }}>
+            <Text style={{ color: dateText ? 'black' : '#aaa', fontSize: 30 }}>
               {dateText || '복용 날짜 선택'}
             </Text>
           </TouchableOpacity>
@@ -201,7 +216,7 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
           </Text>
           {selectedOption === 'text' ? (
             <TextInput
-              style={styles.activeInput}
+              style={[styles.activeInput, { fontSize: 30 }]} // 글자 크기 35로 설정
               placeholder="시간 입력"
               placeholderTextColor="#aaa"
               value={timeText}
@@ -213,7 +228,7 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
               onPress={() => toggleVoiceModal('time')}
             >
               <Text
-                style={{ color: timeText ? 'black' : '#aaa', fontSize: 20 }}
+                style={{ color: timeText ? 'black' : '#aaa', fontSize: 30 }}
               >
                 {timeText || '시간 입력'}
               </Text>
@@ -225,7 +240,7 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
           </Text>
           {selectedOption === 'text' ? (
             <TextInput
-              style={styles.activeInput}
+              style={[styles.activeInput, { fontSize: 30 }]} // 글자 크기 35로 설정
               placeholder="식사 전, 후 여부 입력"
               placeholderTextColor="#aaa"
               value={mealText}
@@ -237,7 +252,7 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
               onPress={() => toggleVoiceModal('meal')}
             >
               <Text
-                style={{ color: mealText ? 'black' : '#aaa', fontSize: 20 }}
+                style={{ color: mealText ? 'black' : '#aaa', fontSize: 30 }}
               >
                 {mealText || '식사 전, 후 여부 입력'}
               </Text>
@@ -247,7 +262,10 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
           <View style={[styles.buttonContainer, { marginTop: -7 }]}>
             <TouchableOpacity
               style={styles.cancelButton}
-              onPress={onClose} // 취소 버튼 클릭 시 모달 닫기
+              onPress={() => {
+                resetFields(); // 취소 시 필드 초기화
+                onClose();
+              }} // 취소 버튼 클릭 시 모달 닫기 및 필드 초기화
             >
               <Text style={styles.buttonText}>취소</Text>
             </TouchableOpacity>
@@ -262,6 +280,7 @@ const RegisterMedicineModal: React.FC<RegisterMedicineModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  // 스타일 설정
   safeArea: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -305,7 +324,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     backgroundColor: '#fff',
     textAlign: 'left',
-    fontSize: 20,
     minHeight: 60,
   },
   optionContainer: {
@@ -363,7 +381,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 30,
+    fontSize: 35,
   },
 });
 

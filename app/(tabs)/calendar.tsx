@@ -149,8 +149,17 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     const targetIndex = newData.findIndex((day) => day.date === formattedDate);
 
     if (targetIndex !== -1) {
+      // 시간과 식사 여부가 비어 있으면 ','를 제외하고 이름만 저장
+      const label = `${data.name}${
+        data.time || data.meal
+          ? ` (${data.time || ''}${data.time && data.meal ? ', ' : ''}${
+              data.meal || ''
+            })`
+          : ''
+      }`;
+
       newData[targetIndex].medicines.push({
-        label: `${data.name} (${data.time}, ${data.meal})`,
+        label: label, // 라벨 생성
         checked: false,
       });
       setDateData(newData);
