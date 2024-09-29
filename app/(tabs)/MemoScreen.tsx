@@ -89,26 +89,26 @@ const MemoScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    margin: 3, // MedicationsScreen과 일치하도록 조정
+    margin: 3,
     marginHorizontal: 5,
     backgroundColor: '#f5f5f5',
     flex: 1,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 10, // MedicationsScreen과 동일한 테두리 둥글기
+    borderRadius: 10,
     padding: 20,
-    borderWidth: 2, // 테두리 두께 설정
-    borderColor: '#FF6347', // 메모만의 고유한 테두리 색상 유지 (토마토 색상)
+    borderWidth: 2,
+    borderColor: '#FFD700', // 테두리 색상을 노란색으로 변경 (눈이 편안한 색상)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 3,
-    minHeight: 200, // 카드 최소 높이 설정 (MedicationsScreen과 동일한 높이)
+    minHeight: 200,
   },
   title: {
-    fontSize: 21, // MedicationsScreen과 동일한 폰트 크기
+    fontSize: 21,
     fontWeight: 'bold',
     marginBottom: 15,
     textAlign: 'left',
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
   },
   cardText: {
-    fontSize: 19, // MedicationsScreen과 동일한 폰트 크기
+    fontSize: 19,
   },
   strikeThrough: {
     textDecorationLine: 'line-through',
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   },
   modalText: {
     marginLeft: 10,
-    fontSize: 29, // 모달 내부 텍스트 크기를 29으로 유지
+    fontSize: 29,
     fontWeight: 'bold',
   },
   closeButton: {

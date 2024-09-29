@@ -8,9 +8,6 @@ const NotificationsScreen: React.FC = () => {
     { id: 1, message: '가스점검: 불을 꼭 꺼주세요!', isChecked: true, color: '#32CD32' }, // 초록색
     { id: 2, message: '병원 방문 시 주민등록증 챙기기', isChecked: false, color: '#32CD32' }, // 초록색
     { id: 3, message: '전등을 꺼주세요!', isChecked: false, color: '#32CD32' }, // 초록색
-    { id: 4, message: '회의자료 확인', isChecked: false, color: '#FFA500' }, // 노란색
-    { id: 5, message: '업무 마무리', isChecked: false, color: '#FFA500' }, // 노란색
-    { id: 6, message: '전화 응대하기', isChecked: false, color: '#FFA500' }, // 노란색
   ]);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -163,7 +160,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   closeButton: {
-    backgroundColor: '#FFA500',
+    backgroundColor: '#32CD32', // 닫기 버튼을 초록색으로 변경
     borderRadius: 12,
     padding: 15,
     alignItems: 'center',

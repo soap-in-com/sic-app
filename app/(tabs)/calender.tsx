@@ -1,95 +1,118 @@
-import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // 추가된 AsyncStorage import
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import Modal from 'react-native-modal';
+import { CheckBox } from 'react-native-elements';
+import MemoModal from './memo';
+import RegisterMedicineModal from './pilladd';
+import ScheduleAddModal from './scheduleadd';
 
-const GOOGLE_CLOUD_API_KEY = 'AIzaSyCRBV4NPRexVT_2yjvT1ogr4lxEWNQjMv4';
+const { width } = Dimensions.get('window');
 
-type RecordingItem = {
-  text: string;
-  uri: string;
+// 날짜 포맷 함수
+const getFormattedDate = (date: Date): string => {
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const dayOfWeek = days[date.getDay()];
+  return `${month}월 ${day}일(${dayOfWeek})`;
 };
 
-const extractInfoFromText = (
-  text: string,
-  type: 'schedule' | 'medicine' | 'memo'
-) => {
-  const dateRegex = /\d{1,2}월 \d{1,2}일/;
-  const timeRegex = /(오전|오후)?\s?\d{1,2}시/;
-
-  const dateMatch = text.match(dateRegex);
-  const timeMatch = text.match(timeRegex);
-
-  const date = dateMatch ? dateMatch[0] : '';
-  const time = timeMatch ? timeMatch[0] : '';
-
-  let remainingText = text.replace(dateRegex, '').replace(timeRegex, '').trim();
-  let content = remainingText
-    ? remainingText
-    : type === 'schedule'
-    ? '장소 없음'
-    : '내용 없음';
-
-  return [date, time, content].filter(Boolean).join(' ');
+// 주어진 날짜에서 n일 전후의 날짜를 반환하는 함수
+const getDateOffset = (baseDate: Date, offset: number): Date => {
+  const newDate = new Date(baseDate);
+  newDate.setDate(baseDate.getDate() + offset);
+  return newDate;
 };
+
+// 타입 정의
+interface Medicine {
+  label: string;
+  checked: boolean;
+}
+
+interface Schedule {
+  label: string;
+  checked: boolean;
+}
+
+interface DayData {
+  date: string;
+  isToday: boolean;
+  medicines: Medicine[];
+  schedules: Schedule[];
+}
+
+interface SelectedItems {
+  medicines: { [label: string]: boolean };
+  schedules: { [label: string]: boolean };
+}
 
 const ScheduleAndMedicineScreen: React.FC = () => {
-  const [isScheduleModalVisible, setScheduleModalVisible] = useState(false);
-  const [isMedicineModalVisible, setMedicineModalVisible] = useState(false);
-  const [scheduleText, setScheduleText] = useState('');
-  const [medicineText, setMedicineText] = useState('');
-  const [scheduleList, setScheduleList] = useState<RecordingItem[]>([]);
-  const [medicineList, setMedicineList] = useState<RecordingItem[]>([]);
-  const [memoText, setMemoText] = useState('');
-  const [memoList, setMemoList] = useState<RecordingItem[]>([]);
-  const [isMemoModalVisible, setMemoModalVisible] = useState(false);
+  const today = new Date();
+  const medicineFlatListRef = useRef<FlatList>(null);
+  const scheduleFlatListRef = useRef<FlatList>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [memoModalVisible, setMemoModalVisible] = useState(false);
+  const [scheduleAddModalVisible, setScheduleAddModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<'medicine' | 'schedule' | null>(
+    null
+  );
+  const [dateData, setDateData] = useState<DayData[]>(
+    generateDateData(today, 50)
+  );
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<{
+    [date: string]: SelectedItems;
+  }>({});
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<RecordingItem | null>(null);
-  const [selectedListType, setSelectedListType] = useState<
-    'schedule' | 'medicine' | 'memo' | null
-  >(null);
-  const [audioUri, setAudioUri] = useState<string | null>(null); // 녹음된 파일 URI 저장
 
-  useEffect(() => {
-    const requestPermission = async () => {
-      const { status } = await Audio.requestPermissionsAsync();
-      setHasPermission(status === 'granted');
-      if (status !== 'granted') {
-        Alert.alert('권한 거부됨', '앱에서 마이크 접근 권한이 필요합니다.');
-      }
-    };
-
-    requestPermission();
-  }, []);
-
-  const startRecording = async (
-    setter: React.Dispatch<React.SetStateAction<string>>
-  ) => {
-    if (!hasPermission || isProcessing) {
-      Alert.alert('권한 필요', '마이크 접근 권한이 필요합니다.');
-      return;
-    }
-
-    try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+  // 날짜 데이터 생성 함수
+  function generateDateData(baseDate: Date, numDays: number): DayData[] {
+    const dateData: DayData[] = [];
+    for (let i = -numDays; i <= numDays; i++) {
+      const date = getFormattedDate(getDateOffset(baseDate, i));
+      dateData.push({
+        date,
+        isToday: i === 0,
+        medicines: [],
+        schedules: [],
       });
+    }
+    return dateData;
+  }
 
-      const { recording } = await Audio.Recording.createAsync({
+  // 기존 녹음 중지 및 정리
+  const stopExistingRecording = async () => {
+    if (recording) {
+      try {
+        await recording.stopAndUnloadAsync();
+        setRecording(null);
+        setIsRecording(false);
+      } catch (error) {
+        console.error('Stop recording error: ', error);
+      }
+    }
+  };
+
+  // 녹음 시작 함수
+  const startRecording = async () => {
+    try {
+      await stopExistingRecording();
+
+      const newRecording = new Audio.Recording();
+      await newRecording.prepareToRecordAsync({
         android: {
           extension: '.3gp',
           outputFormat: 1,
@@ -113,557 +136,722 @@ const ScheduleAndMedicineScreen: React.FC = () => {
           bitsPerSecond: 128000,
         },
       });
-      setRecording(recording);
+      await newRecording.startAsync();
+      setRecording(newRecording);
       setIsRecording(true);
-    } catch (err) {
-      console.error('Failed to start recording', err);
+    } catch (error) {
+      console.error('Recording error: ', error);
     }
   };
 
-  const stopRecording = async (
-    setter: React.Dispatch<React.SetStateAction<string>>,
-    type: 'schedule' | 'medicine' | 'memo'
+  // 녹음 중지 함수
+  const stopRecording = async () => {
+    await stopExistingRecording();
+  };
+
+  // 체크박스 토글 함수
+  const toggleCheckBox = (
+    dateIndex: number,
+    type: 'medicine' | 'schedule',
+    itemIndex: number
   ) => {
-    if (!recording || isProcessing) return;
+    const newData = [...dateData];
+    if (type === 'medicine') {
+      newData[dateIndex].medicines[itemIndex].checked =
+        !newData[dateIndex].medicines[itemIndex].checked;
+    } else if (type === 'schedule') {
+      newData[dateIndex].schedules[itemIndex].checked =
+        !newData[dateIndex].schedules[itemIndex].checked;
+    }
+    setDateData(newData);
+    saveData(newData); // 데이터가 변경될 때마다 저장
+  };
 
-    setIsProcessing(true);
-    setIsRecording(false);
-
+  // 데이터 저장 함수
+  const saveData = async (data: DayData[]) => {
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null);
-      setAudioUri(uri); // 녹음된 파일의 URI 저장
+      await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(data));
+    } catch (error) {
+      console.error('Failed to save data', error);
+    }
+  };
 
-      if (uri) {
-        const base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
+  // 앱 로드 시 저장된 데이터 불러오기
+  useEffect(() => {
+    loadData();
+  }, []);
 
-        const response = await fetch(
-          `https://speech.googleapis.com/v1/speech:recognize?key=${GOOGLE_CLOUD_API_KEY}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              config: {
-                encoding: 'LINEAR16',
-                sampleRateHertz: 16000,
-                languageCode: 'ko-KR',
-                model: 'command_and_search',
-              },
-              audio: {
-                content: base64,
-              },
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        const bestAlternative = data.results
-          ?.flatMap((result: any) => result.alternatives)
-          .sort((a: any, b: any) => b.confidence - a.confidence)[0];
-
-        const recordedText = bestAlternative?.transcript || '인식 실패';
-        setter(recordedText);
-
-        if (recordedText === '인식 실패') {
-          Alert.alert('알림', '음성 인식이 실패했습니다. 다시 시도해주세요.');
-        }
+  // AsyncStorage에서 데이터 로드하는 함수
+  const loadData = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+      if (storedData !== null) {
+        setDateData(JSON.parse(storedData)); // 저장된 데이터를 로드하여 상태 업데이트
       }
     } catch (error) {
-      console.error('음성 인식 요청 실패', error);
-      Alert.alert('오류', '음성 인식 중 문제가 발생했습니다.');
-    } finally {
-      setIsProcessing(false);
+      console.error('Failed to load data', error);
     }
   };
 
-  const saveRecording = (
-    text: string,
-    listSetter: React.Dispatch<React.SetStateAction<RecordingItem[]>>,
-    type: 'schedule' | 'medicine' | 'memo'
-  ) => {
-    if (text && text !== '인식 실패' && audioUri) {
-      const formattedText = extractInfoFromText(text, type);
-      listSetter((prevList) => [
-        ...prevList,
-        { text: formattedText, uri: audioUri },
-      ]);
-    } else {
-      Alert.alert('알림', '인식된 텍스트가 없거나 인식이 실패했습니다.');
+  // 오늘 날짜로 스크롤 함수
+  const scrollToTodayMedicine = () => {
+    if (medicineFlatListRef.current) {
+      medicineFlatListRef.current.scrollToIndex({ index: 50, animated: true });
     }
   };
 
-  const handleRetake = async (
-    setter: React.Dispatch<React.SetStateAction<string>>
-  ) => {
-    setter('');
-    setIsRecording(false);
-
-    if (recording) {
-      await recording.stopAndUnloadAsync();
-      setRecording(null);
+  const scrollToTodaySchedule = () => {
+    if (scheduleFlatListRef.current) {
+      scheduleFlatListRef.current.scrollToIndex({ index: 50, animated: true });
     }
   };
 
-  const resetModal = () => {
-    if (recording) {
-      recording.stopAndUnloadAsync();
-      setRecording(null);
-    }
-    setIsRecording(false);
-    setIsProcessing(false);
-    setAudioUri(null); // 저장된 URI 초기화
-    setScheduleText('');
-    setMedicineText('');
-    setMemoText('');
+  // 모달 열기 함수
+  const openModal = (type: 'medicine' | 'schedule') => {
+    setModalType(type);
+    setModalVisible(true);
   };
 
-  const playRecording = async (uri: string) => {
-    try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: false,
-        staysActiveInBackground: true,
-        playThroughEarpieceAndroid: false, // 스피커 사용
+  // 모달 닫기 함수
+  const closeModal = () => {
+    setModalVisible(false);
+  };
+
+  // 약 저장 후 상태 업데이트 함수
+  const handleSaveMedicine = (data: {
+    name: string;
+    date: string;
+    time: string;
+  }) => {
+    const newData = [...dateData];
+
+    const formattedDate = getFormattedDate(new Date(data.date));
+    const targetIndex = newData.findIndex((day) => day.date === formattedDate);
+
+    if (targetIndex !== -1) {
+      const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
+
+      newData[targetIndex].medicines.push({
+        label: label,
+        checked: false,
       });
-
-      const { sound } = await Audio.Sound.createAsync({ uri });
-      await sound.playAsync();
-    } catch (error) {
-      console.error('음성 재생 중 오류 발생:', error);
+      setDateData(newData);
+      saveData(newData); // 데이터 저장
     }
+
+    closeModal();
   };
 
-  const openDeleteModal = (
-    item: RecordingItem,
-    type: 'schedule' | 'medicine' | 'memo'
+  // 일정 저장 후 상태 업데이트 함수
+  const handleSaveSchedule = (data: {
+    name: string;
+    date: string;
+    time: string;
+  }) => {
+    const newData = [...dateData];
+
+    const formattedDate = getFormattedDate(new Date(data.date));
+    const targetIndex = newData.findIndex((day) => day.date === formattedDate);
+
+    if (targetIndex !== -1) {
+      const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
+
+      newData[targetIndex].schedules.push({
+        label: label,
+        checked: false,
+      });
+      setDateData(newData);
+      saveData(newData); // 데이터 저장
+    }
+
+    closeScheduleAddModal();
+  };
+
+  // 일정 추가 모달 열기 함수
+const openScheduleAddModal = () => {
+  setScheduleAddModalVisible(true);
+};
+
+  // 일정 추가 모달 닫기 함수
+  const closeScheduleAddModal = () => {
+    setScheduleAddModalVisible(false);
+  };
+
+  // 메모 모달 열기 함수
+  const openMemoModal = () => {
+    setMemoModalVisible(true);
+  };
+
+  // 메모 모달 닫기 함수
+  const closeMemoModal = () => {
+    setMemoModalVisible(false);
+  };
+
+  // 삭제 모드 토글 함수
+  const toggleDeleteMode = () => {
+    setDeleteMode(!deleteMode);
+    setSelectedItems({});
+  };
+
+  // 항목 선택 토글 함수 (날짜별로 선택)
+  const toggleSelectItem = (
+    date: string,
+    key: string,
+    type: 'medicines' | 'schedules'
   ) => {
-    setSelectedItem(item);
-    setSelectedListType(type);
-    setIsDeleteModalVisible(true);
-  };
+    setSelectedItems((prevSelectedItems) => {
+      const updatedItems = { ...prevSelectedItems };
 
-  const confirmDelete = () => {
-    if (selectedItem && selectedListType) {
-      const updateList = (list: RecordingItem[]) =>
-        list.filter((item) => item !== selectedItem);
-
-      if (selectedListType === 'schedule') {
-        setScheduleList(updateList);
-      } else if (selectedListType === 'medicine') {
-        setMedicineList(updateList);
-      } else if (selectedListType === 'memo') {
-        setMemoList(updateList);
+      if (!updatedItems[date]) {
+        updatedItems[date] = { medicines: {}, schedules: {} };
       }
 
-      setSelectedItem(null);
-      setSelectedListType(null);
-      setIsDeleteModalVisible(false);
-    }
+      updatedItems[date][type][key] = !updatedItems[date][type][key];
+
+      return updatedItems;
+    });
   };
 
-  const renderRecordingList = (
-    header: string,
-    list: RecordingItem[],
-    listSetter: React.Dispatch<React.SetStateAction<RecordingItem[]>>,
-    type: 'schedule' | 'medicine' | 'memo'
-  ) => (
-    <>
-      <Text style={styles.listHeader}>{header}</Text>
-      {list.map((item, index) => (
-        <View key={index} style={styles.listItemContainer}>
-          <View style={styles.textContainer}>
-            <Text style={styles.listItem}>{item.text}</Text>
-          </View>
-          <View style={styles.listItemButtons}>
-            {item.uri && (
-              <TouchableOpacity onPress={() => playRecording(item.uri)}>
-                <MaterialIcons
-                  name="play-circle-outline"
-                  size={40}
-                  color="#4CAF50"
-                />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={() => openDeleteModal(item, type)}>
-              <MaterialIcons name="delete" size={40} color="#f44336" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
-    </>
-  );
+  // 선택된 항목 삭제 함수
+  const deleteSelectedItems = () => {
+    const newData = dateData.map((day) => {
+      if (!selectedItems[day.date]) return day;
+
+      const medicines = day.medicines.filter(
+        (medicine) => !selectedItems[day.date].medicines[medicine.label]
+      );
+      const schedules = day.schedules.filter(
+        (schedule) => !selectedItems[day.date].schedules[schedule.label]
+      );
+
+      return { ...day, medicines, schedules };
+    });
+
+    setDateData(newData);
+    saveData(newData); // 삭제 후 데이터 저장
+    setDeleteMode(false);
+    setSelectedItems({});
+  };
 
   return (
-    <ScrollView style={styles.scrollContainer}>
-      <View style={styles.container}>
-        <View style={styles.buttonContainer}>
+    <SafeAreaView style={styles.safeArea}>
+      {deleteMode && (
+        <View
+          style={[styles.actionContainer, styles.actionContainerDeleteMode]}
+        >
           <TouchableOpacity
-            style={styles.squareButton2}
-            onPress={() => {
-              resetModal();
-              setScheduleModalVisible(true);
-            }}
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={deleteSelectedItems}
           >
-            <Text style={styles.buttonText}>일정등록</Text>
+            <Text style={styles.deleteButtonText}>삭제</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={styles.squareButton1}
-            onPress={() => {
-              resetModal();
-              setMedicineModalVisible(true);
-            }}
+            style={[styles.actionButton, styles.cancelButton]}
+            onPress={toggleDeleteMode}
           >
-            <Text style={styles.buttonText}>복용약등록</Text>
+            <Text style={styles.cancelButtonText}>취소</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        {/* 금일 복용약 */}
+        <View style={styles.whiteBox}>
+          <TouchableOpacity
+            onPress={scrollToTodayMedicine}
+            style={styles.headerWithIcon}
+          >
+            <View style={styles.headerTextWithIcon}>
+              <Text style={styles.sectionHeader}>금일 복용약</Text>
+              <Image
+                source={require('../../assets/images/pill.png')}
+                style={styles.headerIcon}
+              />
+            </View>
+          </TouchableOpacity>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={dateData}
+            ref={medicineFlatListRef}
+            keyExtractor={(item) => item.date}
+            contentContainerStyle={styles.scrollViewContent}
+            initialScrollIndex={50}
+            getItemLayout={(data, index) => ({
+              length: width * 0.6,
+              offset: (width * 0.6 + 16) * index,
+              index,
+            })}
+            renderItem={({ item, index: dateIndex }) => (
+              <View style={styles.dayContainer}>
+                <View
+                  style={[
+                    styles.medicineCard,
+                    item.isToday && styles.medicineCardToday,
+                  ]}
+                >
+                  <Text style={styles.dayHeader}>{item.date}</Text>
+                  {item.medicines.length === 0 ? (
+                    <Text style={styles.noScheduleText}>일정없음</Text>
+                  ) : (
+                    item.medicines.map((medicine: Medicine, idx: number) => (
+                      <View style={styles.medicineItem} key={idx}>
+                        {!deleteMode && (
+                          <CheckBox
+                            checked={medicine.checked}
+                            onPress={() =>
+                              toggleCheckBox(dateIndex, 'medicine', idx)
+                            }
+                            checkedColor={
+                              medicine.checked ? '#FF6F00' : undefined
+                            }
+                            containerStyle={styles.checkBoxContainer}
+                            size={40}
+                          />
+                        )}
+                        <Text
+                          style={[
+                            styles.medicineText,
+                            medicine.checked && styles.checkedText,
+                            { flexWrap: 'wrap', flexShrink: 1 },
+                          ]}
+                        >
+                          {medicine.label}
+                        </Text>
+                        {deleteMode && (
+                          <TouchableOpacity
+                            style={[
+                              styles.circleButton,
+                              selectedItems[item.date]?.medicines[
+                                medicine.label
+                              ] && styles.circleButtonSelected,
+                            ]}
+                            onPress={() =>
+                              toggleSelectItem(
+                                item.date,
+                                medicine.label,
+                                'medicines'
+                              )
+                            }
+                          >
+                            {selectedItems[item.date]?.medicines[
+                              medicine.label
+                            ] && <View style={styles.circleFill} />}
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              </View>
+            )}
+          />
+        </View>
+
+        {/* 오늘의 일정 */}
+        <View style={styles.whiteBox}>
+          <TouchableOpacity
+            onPress={scrollToTodaySchedule}
+            style={styles.headerWithIcon}
+          >
+            <View style={styles.headerTextWithIcon}>
+              <Text style={styles.sectionHeader}>오늘의 일정</Text>
+              <Image
+                source={require('../../assets/images/check.png')}
+                style={styles.headerIcon}
+              />
+            </View>
+          </TouchableOpacity>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={dateData}
+            ref={scheduleFlatListRef}
+            keyExtractor={(item) => item.date}
+            contentContainerStyle={styles.scrollViewContent}
+            initialScrollIndex={50}
+            getItemLayout={(data, index) => ({
+              length: width * 0.6,
+              offset: (width * 0.6 + 16) * index,
+              index,
+            })}
+            renderItem={({ item, index: dateIndex }) => (
+              <View style={styles.dayContainer}>
+                <View
+                  style={[
+                    styles.scheduleCard,
+                    item.isToday && styles.scheduleCardToday,
+                  ]}
+                >
+                  <Text style={styles.dayHeader}>{item.date}</Text>
+                  {item.schedules.length === 0 ? (
+                    <Text style={styles.noScheduleText}>일정없음</Text>
+                  ) : (
+                    item.schedules.map((schedule: Schedule, idx: number) => (
+                      <View style={styles.scheduleItem} key={idx}>
+                        {!deleteMode && (
+                          <CheckBox
+                            checked={schedule.checked}
+                            onPress={() =>
+                              toggleCheckBox(dateIndex, 'schedule', idx)
+                            }
+                            checkedColor={
+                              schedule.checked ? 'blue' : undefined
+                            }
+                            containerStyle={styles.checkBoxContainer}
+                            size={40}
+                          />
+                        )}
+                        <Text
+                          style={[
+                            styles.scheduleText,
+                            schedule.checked && styles.checkedText,
+                            { flexWrap: 'wrap', flexShrink: 1 },
+                          ]}
+                        >
+                          {schedule.label}
+                        </Text>
+                        {deleteMode && (
+                          <TouchableOpacity
+                            style={[
+                              styles.circleButton,
+                              selectedItems[item.date]?.schedules[
+                                schedule.label
+                              ] && styles.circleButtonSelected,
+                            ]}
+                            onPress={() =>
+                              toggleSelectItem(
+                                item.date,
+                                schedule.label,
+                                'schedules'
+                              )
+                            }
+                          >
+                            {selectedItems[item.date]?.schedules[
+                              schedule.label
+                            ] && <View style={styles.circleFill} />}
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              </View>
+            )}
+          />
+        </View>
+
+        {/* 하단 버튼 */}
+        <View style={styles.actionContainer}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              styles.medicineAddButton,
+              deleteMode && styles.disabledButton,
+            ]}
+            onPress={() => openModal('medicine')}
+            disabled={deleteMode}
+          >
+            <Image
+              source={require('../../assets/images/pill.png')}
+              style={styles.icon}
+            />
+            <Text style={styles.actionButtonText}>복용약 추가</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              styles.scheduleAddButton,
+              deleteMode && styles.disabledButton,
+            ]}
+            onPress={openScheduleAddModal}
+            disabled={deleteMode}
+          >
+            <Image
+              source={require('../../assets/images/check.png')}
+              style={styles.icon}
+            />
+            <Text style={styles.actionButtonText}>일정 추가</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.memoButton}
-          onPress={() => {
-            resetModal();
-            setMemoModalVisible(true);
-          }}
-        >
-          <Text style={styles.buttonText}>메모등록</Text>
-        </TouchableOpacity>
+        <View style={styles.actionContainer}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              styles.memoButton,
+              deleteMode && styles.disabledButton,
+            ]}
+            onPress={openMemoModal}
+            disabled={deleteMode}
+          >
+            <Image
+              source={require('../../assets/images/memo.png')}
+              style={styles.icon}
+            />
+            <Text style={styles.actionButtonText}>메모하기</Text>
+          </TouchableOpacity>
 
-        {renderRecordingList(
-          '일정등록내역',
-          scheduleList,
-          setScheduleList,
-          'schedule'
-        )}
-        {renderRecordingList(
-          '복용약등록내역',
-          medicineList,
-          setMedicineList,
-          'medicine'
-        )}
-        {renderRecordingList('메모등록내역', memoList, setMemoList, 'memo')}
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              styles.deleteMainButton,
+              deleteMode && styles.disabledButton,
+            ]}
+            onPress={toggleDeleteMode}
+            disabled={deleteMode}>
+            <Image
+              source={require('../../assets/images/close.png')}
+              style={styles.icon}
+            />
+            <Text style={styles.actionButtonText}>복용약, 일정 삭제</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* 삭제 확인 모달 */}
-        <Modal
-          isVisible={isDeleteModalVisible}
-          onBackdropPress={() => setIsDeleteModalVisible(false)}
-          style={styles.modal}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>삭제하시겠습니까?</Text>
-            <View style={styles.bottomBar}>
-              <TouchableOpacity
-                style={[styles.bottomButton, styles.saveButton]}
-                onPress={confirmDelete}
-              >
-                <Text style={styles.bottomButtonText}>예</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.bottomButton, styles.cancelButton]}
-                onPress={() => setIsDeleteModalVisible(false)}
-              >
-                <Text style={styles.bottomButtonText}>아니요</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+        {/* 하단 여백 추가 */}
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
 
-        {/* 일정 등록 모달 */}
-        <Modal
-          isVisible={isScheduleModalVisible}
-          onModalHide={resetModal}
-          style={styles.modal}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {isRecording
-                ? '말이 끝나면 마이크를 한번 더 눌러주세요'
-                : '마이크를 누르고 일정을 말해주세요'}
-            </Text>
-            <TouchableOpacity
-              onPress={
-                isRecording
-                  ? () => stopRecording(setScheduleText, 'schedule')
-                  : () => startRecording(setScheduleText)
-              }
-              style={styles.voiceButton}
-            >
-              <MaterialIcons
-                name="keyboard-voice"
-                size={80}
-                color={isRecording ? 'red' : '#4CAF50'}
-              />
-            </TouchableOpacity>
-            <Text style={styles.transcriptionText}>{scheduleText}</Text>
-            <TouchableOpacity
-              style={styles.retakeButton}
-              onPress={() => handleRetake(setScheduleText)}
-            >
-              <Text style={styles.buttonText}>다시 말하기</Text>
-            </TouchableOpacity>
-            <View style={styles.bottomBar}>
-              <TouchableOpacity
-                style={[styles.bottomButton, styles.saveButton]}
-                onPress={() => {
-                  saveRecording(scheduleText, setScheduleList, 'schedule');
-                  setScheduleModalVisible(false);
-                }}
-              >
-                <Text style={styles.bottomButtonText}>저장</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.bottomButton, styles.cancelButton]}
-                onPress={() => setScheduleModalVisible(false)}
-              >
-                <Text style={styles.bottomButtonText}>취소</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+      {/* 복용약 추가 모달 */}
+      <RegisterMedicineModal
+        visible={modalVisible && modalType === 'medicine'}
+        onClose={closeModal}
+        onSave={handleSaveMedicine}
+      />
 
-        {/* 복용약 등록 모달 */}
-        <Modal
-          isVisible={isMedicineModalVisible}
-          onModalHide={resetModal}
-          style={styles.modal}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {isRecording
-                ? '말이 끝나면 마이크를 한번 더 눌러주세요'
-                : '마이크를 누르고 복용약 정보를 말해주세요'}
-            </Text>
-            <TouchableOpacity
-              onPress={
-                isRecording
-                  ? () => stopRecording(setMedicineText, 'medicine')
-                  : () => startRecording(setMedicineText)
-              }
-              style={styles.voiceButton}
-            >
-              <MaterialIcons
-                name="keyboard-voice"
-                size={80}
-                color={isRecording ? 'red' : '#4CAF50'}
-              />
-            </TouchableOpacity>
-            <Text style={styles.transcriptionText}>{medicineText}</Text>
-            <TouchableOpacity
-              style={styles.retakeButton}
-              onPress={() => handleRetake(setMedicineText)}
-            >
-              <Text style={styles.buttonText}>다시 말하기</Text>
-            </TouchableOpacity>
-            <View style={styles.bottomBar}>
-              <TouchableOpacity
-                style={[styles.bottomButton, styles.saveButton]}
-                onPress={() => {
-                  saveRecording(medicineText, setMedicineList, 'medicine');
-                  setMedicineModalVisible(false);
-                }}
-              >
-                <Text style={styles.bottomButtonText}>저장</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.bottomButton, styles.cancelButton]}
-                onPress={() => setMedicineModalVisible(false)}
-              >
-                <Text style={styles.bottomButtonText}>취소</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+      {/* 메모 모달 */}
+      <MemoModal
+        visible={memoModalVisible}
+        onClose={closeMemoModal}
+        onSave={(memo) => {
+          console.log('저장된 메모:', memo);
+          closeMemoModal();
+        }}
+        startRecording={startRecording}
+        stopRecording={stopRecording}
+      />
 
-        {/* 메모 등록 모달 */}
-        <Modal
-          isVisible={isMemoModalVisible}
-          onModalHide={resetModal}
-          style={styles.modal}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {isRecording
-                ? '말이 끝나면 마이크를 한번 더 눌러주세요'
-                : '마이크를 누르고 메모를 말해주세요'}
-            </Text>
-            <TouchableOpacity
-              onPress={
-                isRecording
-                  ? () => stopRecording(setMemoText, 'memo')
-                  : () => startRecording(setMemoText)
-              }
-              style={styles.voiceButton}
-            >
-              <MaterialIcons
-                name="keyboard-voice"
-                size={80}
-                color={isRecording ? 'red' : '#4CAF50'}
-              />
-            </TouchableOpacity>
-            <Text style={styles.transcriptionText}>{memoText}</Text>
-            <TouchableOpacity
-              style={styles.retakeButton}
-              onPress={() => handleRetake(setMemoText)}
-            >
-              <Text style={styles.buttonText}>다시 말하기</Text>
-            </TouchableOpacity>
-            <View style={styles.bottomBar}>
-              <TouchableOpacity
-                style={[styles.bottomButton, styles.saveButton]}
-                onPress={() => {
-                  saveRecording(memoText, setMemoList, 'memo');
-                  setMemoModalVisible(false);
-                }}
-              >
-                <Text style={styles.bottomButtonText}>저장</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.bottomButton, styles.cancelButton]}
-                onPress={() => setMemoModalVisible(false)}
-              >
-                <Text style={styles.bottomButtonText}>취소</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      </View>
-    </ScrollView>
+      {/* 일정 추가 모달 */}
+      <ScheduleAddModal
+        visible={scheduleAddModalVisible}
+        onClose={closeScheduleAddModal}
+        onSave={handleSaveSchedule} // 일정 저장 함수 연결
+      />
+    </SafeAreaView>
   );
 };
 
+// 스타일 정의
 const styles = StyleSheet.create({
-  scrollContainer: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#eaeaea',
   },
-  container: {
-    flex: 1,
-    padding: 16,
-    paddingTop: 60,
-    backgroundColor: '#fff',
+  scrollViewContent: {
+    paddingHorizontal: 16,
   },
-  buttonContainer: {
+  whiteBox: {
+    backgroundColor: '#fff',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  actionContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  actionContainerDeleteMode: {
     marginBottom: 20,
   },
-  squareButton1: {
-    flex: 1,
-    height: 200,
-    justifyContent: 'center',
+  headerWithIcon: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#49277f',
-    borderRadius: 8,
-    marginHorizontal: 1,
   },
-  squareButton2: {
-    flex: 1,
-    height: 200,
-    justifyContent: 'center',
+  headerTextWithIcon: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ff5252',
-    borderRadius: 8,
-    marginHorizontal: 1,
   },
-  memoButton: {
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFA500',
-    borderRadius: 8,
-    marginTop: -10,
-    marginBottom: 10,
+  headerIcon: {
+    width: 30,
+    height: 30,
+    marginLeft: 5,
+    marginBottom: 14,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 42,
-    fontWeight: 'bold',
-  },
-  listHeader: {
+  sectionHeader: {
     fontSize: 35,
     fontWeight: 'bold',
-    marginVertical: 20,
+    marginBottom: 12,
   },
-  listItemContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
+  dayContainer: {
+    width: width * 0.6,
+    marginRight: 16,
+    backgroundColor: '#fff',
+    flexDirection: 'column',
   },
-  textContainer: {
-    flex: 1,
-    marginRight: 20,
+  medicineCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
   },
-  listItem: {
-    fontSize: 36,
-    flexWrap: 'wrap',
+  medicineCardToday: {
+    borderWidth: 2,
+    borderColor: '#FF6F00',
   },
-  listItemButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  scheduleCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
   },
-  modal: {
-    justifyContent: 'center',
-    margin: 0,
+  scheduleCardToday: {
+    borderWidth: 2,
+    borderColor: '#1565C0',
   },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-    margin: 20,
-  },
-  modalTitle: {
-    fontSize: 30,
+  dayHeader: {
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 0,
   },
-  voiceButton: {
-    marginVertical: 30,
-  },
-  transcriptionText: {
-    fontSize: 30,
-    color: '#000',
-    marginTop: 20,
+  noScheduleText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#707070',
     textAlign: 'center',
+    marginTop: 15,
+    marginBottom: 15,
   },
-  bottomBar: {
+  medicineItem: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-  },
-  bottomButton: {
-    flex: 1,
     alignItems: 'center',
-    paddingVertical: 15,
-    backgroundColor: '#fff',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingVertical: 10,
   },
-  bottomButtonText: {
-    fontSize: 24,
+  scheduleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingVertical: 10,
+  },
+  medicineText: {
+    fontSize: 25,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    flexWrap: 'wrap',
+    flexShrink: 1,
+    width: '100%',
   },
-  saveButton: {
-    backgroundColor: '#fff',
+  scheduleText: {
+    fontSize: 25,
+    fontWeight: 'bold',
+    flexWrap: 'wrap',
+    flexShrink: 1,
+    width: '100%',
+  },
+  checkedText: {
+    textDecorationLine: 'line-through',
+    color: 'gray',
+  },
+  checkBoxContainer: {
+    padding: 0,
+    margin: 0,
+    marginRight: 10,
+  },
+  circleButton: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  circleButtonSelected: {
+    borderColor: '#FF0000',
+  },
+  circleFill: {
+    width: 25,
+    height: 25,
+    borderRadius: 12.5,
+    backgroundColor: '#FF0000',
+  },
+  actionButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingVertical: 20,
+    marginHorizontal: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  medicineAddButton: {
+    backgroundColor: '#e6f4fa',
+  },
+  scheduleAddButton: {
+    backgroundColor: '#ebf5e0',
+  },
+  memoButton: {
+    backgroundColor: '#f8f3c5',
+  },
+  deleteMainButton: {
+    backgroundColor: '#fec1b9',
+  },
+  deleteButton: {
+    backgroundColor: '#FF6F6F',
   },
   cancelButton: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f8d7da',
   },
-  retakeButton: {
-    backgroundColor: '#FFC107',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-    marginBottom: 20,
+  actionButtonText: {
+    color: 'black',
+    fontWeight: 'bold',
+    fontSize: 28,
+    marginTop: 8,
+  },
+  deleteButtonText: {
+    color: 'black',
+    fontSize: 30,
+    fontWeight: 'bold',
+  },
+  cancelButtonText: {
+    color: 'black',
+    fontSize: 30,
+    fontWeight: 'bold',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  icon: {
+    width: 70,
+    height: 70,
+    marginBottom: 8,
+  },
+  bottomSpacer: {
+    height: 50,
   },
 });
 

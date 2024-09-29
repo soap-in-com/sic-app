@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MedicationsScreen from './MedicationsScreen'; // 복용약 컴포넌트
-import MemoScreen from './MemoScreen';
+import MemoScreen from './MemoScreen'; // 메모 컴포넌트
 import NotificationsScreen from './NotificationsScreen'; // 필수 확인사항 컴포넌트
 import TasksScreen from './TasksScreen'; // 일정 컴포넌트
 import WeatherComponent from './WeatherComponent'; // 날씨 컴포넌트

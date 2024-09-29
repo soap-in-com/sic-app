@@ -111,6 +111,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     margin: 3,  // 바깥쪽 여백 추가
+    marginHorizontal: 5,
     backgroundColor: '#f5f5f5',
     flex: 1,
   },

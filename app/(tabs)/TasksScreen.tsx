@@ -212,8 +212,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start', // 왼쪽 정렬
   },
   modalTitle: {
-    fontSize: 29, // 모달 안의 글씨 크기
-    fontWeight: 'bold',
+    fontSize: 25, // 모달 안의 글씨 크기
     marginBottom: 15,
     textAlign: 'center',
     width: '100%',
