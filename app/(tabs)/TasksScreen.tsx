@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     width: '49%', // 카드 가로 크기
     backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 25, // 카드 크기를 키우기 위해 패딩을 더 넓게 설정
+    padding: 20, // 카드 크기를 키우기 위해 패딩을 더 넓게 설정
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,

@@ -1,13 +1,12 @@
 import CheckBox from 'expo-checkbox';
 import React, { useState } from 'react';
-import { Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const MemoScreen: React.FC = () => {
   const [memos, setMemos] = useState([
-    { id: 1, memo: '회의 준비하기', isChecked: true, color: '#FF6347' }, // 토마토 색상
-    { id: 2, memo: '약 챙기기', isChecked: false, color: '#FF6347' },
-    { id: 3, memo: '서류 제출', isChecked: false, color: '#FF6347' },
-    { id: 4, memo: '메일 확인', isChecked: false, color: '#FFD700' }, // 노란색
+    { id: 1, memo: '약 챙기기', isChecked: false, color: '#FFD700' }, 
+    { id: 2, memo: '서류 제출', isChecked: false, color: '#FFD700' }, 
+    { id: 3, memo: '메일 확인', isChecked: false, color: '#FFD700' }, 
   ]);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -30,7 +29,10 @@ const MemoScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <TouchableOpacity onPress={openModal}>
         <View style={styles.card}>
-          <Text style={styles.title}>오늘의 메모 📝</Text>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>오늘의 메모</Text>
+            <Image source={require('../../assets/images/memo.png')} style={styles.icon} />
+          </View>
           {memos.slice(0, 3).map((memo) => (
             <View key={memo.id.toString()} style={styles.item}>
               <CheckBox
@@ -76,7 +78,7 @@ const MemoScreen: React.FC = () => {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+            <TouchableOpacity onPress={closeModal} style={[styles.closeButton, { backgroundColor: '#FFD700' }]}>
               <Text style={styles.closeButtonText}>닫기</Text>
             </TouchableOpacity>
           </View>
@@ -89,7 +91,7 @@ const MemoScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    margin: 3,
+    margin: 1,
     marginHorizontal: 5,
     backgroundColor: '#f5f5f5',
     flex: 1,
@@ -99,7 +101,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
     borderWidth: 2,
-    borderColor: '#FFD700', // 테두리 색상을 노란색으로 변경 (눈이 편안한 색상)
+    borderColor: '#FFD700',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -107,11 +109,19 @@ const styles = StyleSheet.create({
     elevation: 3,
     minHeight: 200,
   },
+  titleContainer: {
+    flexDirection: 'row', // 텍스트와 이미지를 가로로 배치
+    alignItems: 'center',
+  },
   title: {
     fontSize: 21,
     fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'left',
+    marginRight: 10, // 텍스트와 이미지 사이의 간격을 조정
+  },
+  icon: {
+    width: 29,
+    height: 24,
+    alignSelf: 'center',
   },
   item: {
     flexDirection: 'row',
@@ -161,7 +171,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   closeButton: {
-    backgroundColor: '#FF6347',
     borderRadius: 12,
     padding: 15,
     alignItems: 'center',

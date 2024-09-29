@@ -90,8 +90,6 @@ const WeatherComponent: React.FC = () => {
         return require('../../assets/images/weather/snowy.png');
       case 'Thunderstorm':
         return require('../../assets/images/weather/thunderstorm.png');
-      case 'Drizzle':
-        return require('../../assets/images/weather/sunny&cloud.png');
       case 'Wind':
         return require('../../assets/images/weather/windy.png');
       default:
@@ -101,55 +99,23 @@ const WeatherComponent: React.FC = () => {
 
   // 날씨에 따른 준비물 문구 반환
   const getPreparednessMessage = (temp: number, condition: string, pm10: number) => {
-    if (temp >= 33) {
-      return '날씨가 너무 더우니 외출을 자제해주세요.';
-    } else if (condition === 'Rain') {
-      return '비가 오고 있으니 우산을 준비해주세요.';
-    } else if (condition === 'Snow' || temp < 0) {
-      return '날씨가 너무 추우니 옷을 따뜻하게 입어주세요.';
-    } else if (pm10 > 80) {
-      return '미세먼지 농도가 좋지 않으니 마스크를 착용해주세요.';
-    } else {
-      return ''; // 특별한 문구가 없을 경우
-    }
+    if (temp >= 33) return { message: '날씨가 너무 더우니 외출을 자제해주세요.', icon: require('../../assets/images/temperature.png') };
+    if (condition === 'Rain') return { message: '비가 오고 있으니 우산을 준비해주세요.', icon: require('../../assets/images/umbrella.png') };
+    if (condition === 'Snow' || temp < 0) return { message: '날씨가 너무 추우니 옷을 따뜻하게 입어주세요.', icon: require('../../assets/images/muffler.png') };
+    if (pm10 > 80) return { message: '미세먼지 농도가 좋지 않으니 마스크를 착용해주세요.', icon: require('../../assets/images/mask.png') };
+    return { message: '', icon: null };
   };
 
   useEffect(() => {
     const fetchWeatherData = async (latitude: number, longitude: number, location: string) => {
       try {
-        // 현재 날씨 데이터 (weather API)
-        const weatherResult = await axios.get(
-          `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
-        );
-
+        const weatherResult = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`);
         const temp = Math.round(weatherResult.data.main.temp);
         const condition = weatherResult.data.weather[0].main;
 
-        // 5일 예보 데이터 (forecast API)
-        const forecastResult = await axios.get(
-          `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
-        );
-
-        // 오늘 날짜의 최저/최고 기온 계산
-        const today = new Date().getDate();
-        let minTemp = Number.MAX_VALUE;
-        let maxTemp = Number.MIN_VALUE;
-
-        forecastResult.data.list.forEach((entry: any) => {
-          const entryDate = new Date(entry.dt_txt).getDate();
-          if (entryDate === today) {
-            const temp = entry.main.temp;
-            if (temp < minTemp) minTemp = temp;
-            if (temp > maxTemp) maxTemp = temp;
-          }
-        });
-
-        const pollutionResult = await axios.get(
-          `http://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`
-        );
+        const pollutionResult = await axios.get(`http://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`);
         const pm10 = pollutionResult.data.list[0]?.components.pm10 ?? 0;
 
-        // 날짜와 요일 계산
         const date = new Date();
         const formattedDate = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
         const dayOfWeek = getShortDayOfWeek(date.toLocaleString('en-US', { weekday: 'long' }));
@@ -158,49 +124,30 @@ const WeatherComponent: React.FC = () => {
           temp,
           condition,
           location,
-          minTemp: Math.round(minTemp),
-          maxTemp: Math.round(maxTemp),
+          minTemp: temp - 5,
+          maxTemp: temp + 5,
           pm10,
           date: formattedDate,
           dayOfWeek,
         });
       } catch (error) {
         Alert.alert('날씨 정보를 불러올 수 없습니다.', '잠시 후 다시 시도해주세요.');
-        console.error(error);
       } finally {
         setLoading(false);
       }
     };
 
     const fetchLocationAndWeather = async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('위치 권한 요청', '위치 권한이 거부되었습니다.');
-          setLoading(false);
-          return;
-        }
+      const locationData = await Location.getCurrentPositionAsync();
+      const latitude = locationData.coords.latitude;
+      const longitude = locationData.coords.longitude;
 
-        const locationData = await Location.getCurrentPositionAsync();
-        const latitude = locationData.coords.latitude;
-        const longitude = locationData.coords.longitude;
+      const reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+      const city = reverseGeocode[0].city || reverseGeocode[0].region;
+      const district = reverseGeocode[0].district;
+      const formattedLocation = `${city} ${district}`;
 
-        const reverseGeocode = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
-        });
-
-        const address = reverseGeocode[0];
-        const city = address.city || address.region;
-        const district = address.district;
-        const formattedLocation = `${city} ${district}`;
-
-        fetchWeatherData(latitude, longitude, formattedLocation);
-      } catch (error) {
-        Alert.alert('위치 정보를 불러올 수 없습니다.', '잠시 후 다시 시도해주세요.');
-        setLoading(false);
-        console.error(error);
-      }
+      fetchWeatherData(latitude, longitude, formattedLocation);
     };
 
     fetchLocationAndWeather();
@@ -222,25 +169,31 @@ const WeatherComponent: React.FC = () => {
     );
   }
 
+  const preparedness = getPreparednessMessage(weather.temp, weather.condition, weather.pm10);
+
+  // 온도에 따른 색상 설정
+  const getTemperatureColor = (temp: number) => {
+    if (temp < 0) return 'blue'; // - 온도 파란색
+    if (temp < 20) return 'lightblue'; // 시원할 때 하늘색
+    if (temp < 30) return 'black'; // 보통일 때 검은색
+    if (temp < 35) return 'orange'; // 조금 더울 때 주황색
+    return 'red'; // 너무 더울 때 빨간색
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
-        {/* 날짜 텍스트 굵게 처리 */}
         <Text style={[styles.dateText, { fontWeight: 'bold', color: 'black' }]}>
           {weather.date} <Text style={{ color: getDayOfWeekColor(weather.dayOfWeek, weather.date) }}>({weather.dayOfWeek})</Text>
         </Text>
-
-        {/* 위치 텍스트 굵게 처리 */}
-        <Text style={[styles.locationText, { fontWeight: 'bold' }]}>
-          {weather.location}
-        </Text>
+        <Text style={[styles.locationText, { fontWeight: 'bold' }]}>{weather.location}</Text>
 
         {getWeatherIcon(weather.condition) && (
           <Image source={getWeatherIcon(weather.condition)} style={styles.weatherIcon} />
         )}
 
-        {/* 날씨 텍스트 크기 및 스타일 */}
-        <Text style={styles.temperatureText}>{weather.temp}°</Text>
+         {/* 온도 텍스트에 색상 적용 */}
+         <Text style={[styles.temperatureText, { color: getTemperatureColor(weather.temp) }]}>{weather.temp}°</Text>
 
         <View style={styles.weatherDetailsContainer}>
           <Text style={styles.minMaxText}>
@@ -255,14 +208,17 @@ const WeatherComponent: React.FC = () => {
           </Text>
         </View>
 
-        {/* 날씨에 따른 준비물 문구 표시 */}
-        <Text style={styles.preparednessMessage}>{getPreparednessMessage(weather.temp, weather.condition, weather.pm10)}</Text>
+        {preparedness.message !== '' && (
+          <View style={styles.preparednessContainer}>
+            <Text style={styles.preparednessMessage}>{preparedness.message}</Text>
+            {preparedness.icon && <Image source={preparedness.icon} style={styles.preparednessIcon} />}
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
 };
 
-// 스타일 정의
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -276,7 +232,7 @@ const styles = StyleSheet.create({
   weatherIcon: {
     width: 130,
     height: 130,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   loadingText: {
     fontSize: 16,
@@ -294,11 +250,11 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   locationText: {
-    fontSize: 26, // 위치 텍스트 크기
+    fontSize: 26,
     color: '#000',
   },
   temperatureText: {
-    fontSize: 72, // 날씨 텍스트 크기
+    fontSize: 72,
     fontWeight: 'bold',
     color: '#ff8c00',
     marginLeft: 28,
@@ -317,11 +273,19 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: 'bold',
   },
-  preparednessMessage: {
+  preparednessContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 10,
+  },
+  preparednessMessage: {
     fontSize: 18,
     color: 'orange',
-    textAlign: 'center',
+  },
+  preparednessIcon: {
+    width: 24,
+    height: 24,
+    marginLeft: 10,
   },
 });
 
