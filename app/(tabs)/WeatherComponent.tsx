@@ -20,7 +20,6 @@ const WeatherComponent: React.FC = () => {
   const [weather, setWeather] = useState<Weather | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 공휴일 및 설날, 추석 리스트 (2029년까지 확장)
   const holidays = [
     '2024-01-01', '2024-02-09', '2024-02-10', '2024-02-11', '2024-03-01',
     '2024-04-10', '2024-05-05', '2024-05-15', '2024-06-06', '2024-08-15',
@@ -47,57 +46,39 @@ const WeatherComponent: React.FC = () => {
 
   const getDayOfWeekColor = (day: string, date: string) => {
     if (isHoliday(date) || day === '일') {
-      return 'red'; // 공휴일 또는 일요일일 경우 빨간색
+      return 'red'; 
     } else if (day === '토') {
-      return 'blue'; // 토요일일 경우 파란색
+      return 'blue'; 
     } else {
-      return 'black'; // 평일은 검은색
+      return 'black'; 
     }
   };
 
-  // 요일을 짧게 표현 (월, 화, 수, 목, 금, 토, 일)
   const getShortDayOfWeek = (day: string) => {
     switch (day) {
-      case 'Sunday':
-        return '일';
-      case 'Monday':
-        return '월';
-      case 'Tuesday':
-        return '화';
-      case 'Wednesday':
-        return '수';
-      case 'Thursday':
-        return '목';
-      case 'Friday':
-        return '금';
-      case 'Saturday':
-        return '토';
-      default:
-        return '';
+      case 'Sunday': return '일';
+      case 'Monday': return '월';
+      case 'Tuesday': return '화';
+      case 'Wednesday': return '수';
+      case 'Thursday': return '목';
+      case 'Friday': return '금';
+      case 'Saturday': return '토';
+      default: return '';
     }
   };
 
-  // 날씨 상태에 따른 이미지 반환
   const getWeatherIcon = (condition: string) => {
     switch (condition) {
-      case 'Clouds':
-        return require('../../assets/images/weather/cloudy.png');
-      case 'Clear':
-        return require('../../assets/images/weather/sunny.png');
-      case 'Rain':
-        return require('../../assets/images/weather/rainy.png');
-      case 'Snow':
-        return require('../../assets/images/weather/snowy.png');
-      case 'Thunderstorm':
-        return require('../../assets/images/weather/thunderstorm.png');
-      case 'Wind':
-        return require('../../assets/images/weather/windy.png');
-      default:
-        return null;
+      case 'Clouds': return require('../../assets/images/weather/cloudy.png');
+      case 'Clear': return require('../../assets/images/weather/sunny.png');
+      case 'Rain': return require('../../assets/images/weather/rainy.png');
+      case 'Snow': return require('../../assets/images/weather/snowy.png');
+      case 'Thunderstorm': return require('../../assets/images/weather/thunderstorm.png');
+      case 'Wind': return require('../../assets/images/weather/windy.png');
+      default: return null;
     }
   };
 
-  // 날씨에 따른 준비물 문구 반환
   const getPreparednessMessage = (temp: number, condition: string, pm10: number) => {
     if (temp >= 33) return { message: '날씨가 너무 더우니 외출을 자제해주세요.', icon: require('../../assets/images/temperature.png') };
     if (condition === 'Rain') return { message: '비가 오고 있으니 우산을 준비해주세요.', icon: require('../../assets/images/umbrella.png') };
@@ -138,28 +119,32 @@ const WeatherComponent: React.FC = () => {
     };
 
     const fetchLocationAndWeather = async () => {
-      const locationData = await Location.getCurrentPositionAsync();
-      const latitude = locationData.coords.latitude;
-      const longitude = locationData.coords.longitude;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('위치 권한 필요', '앱을 사용하려면 위치 권한이 필요합니다.');
+          setLoading(false);
+          return;
+        }
 
-      const reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
-      const city = reverseGeocode[0].city || reverseGeocode[0].region;
-      const district = reverseGeocode[0].district;
-      const formattedLocation = `${city} ${district}`;
+        const locationData = await Location.getCurrentPositionAsync();
+        const latitude = locationData.coords.latitude;
+        const longitude = locationData.coords.longitude;
 
-      fetchWeatherData(latitude, longitude, formattedLocation);
+        const reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+        const city = reverseGeocode[0].city || reverseGeocode[0].region;
+        const district = reverseGeocode[0].district;
+        const formattedLocation = `${city} ${district}`;
+
+        fetchWeatherData(latitude, longitude, formattedLocation);
+      } catch (error) {
+        Alert.alert('위치 정보를 불러올 수 없습니다.', '위치 정보를 다시 시도해주세요.');
+        setLoading(false);
+      }
     };
 
     fetchLocationAndWeather();
   }, []);
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>날씨 정보를 불러오는 중입니다...</Text>
-      </SafeAreaView>
-    );
-  }
 
   if (!weather) {
     return (
@@ -171,18 +156,17 @@ const WeatherComponent: React.FC = () => {
 
   const preparedness = getPreparednessMessage(weather.temp, weather.condition, weather.pm10);
 
-  // 온도에 따른 색상 설정
   const getTemperatureColor = (temp: number) => {
-    if (temp < 0) return 'blue'; // - 온도 파란색
-    if (temp < 20) return 'lightblue'; // 시원할 때 하늘색
-    if (temp < 30) return 'black'; // 보통일 때 검은색
-    if (temp < 35) return 'orange'; // 조금 더울 때 주황색
-    return 'red'; // 너무 더울 때 빨간색
+    if (temp < 0) return 'blue';
+    if (temp < 20) return 'lightblue';
+    if (temp < 30) return 'black';
+    if (temp < 35) return 'orange';
+    return 'red';
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.headerContainer}>
+      <View style={styles.cardContainer}>
         <Text style={[styles.dateText, { fontWeight: 'bold', color: 'black' }]}>
           {weather.date} <Text style={{ color: getDayOfWeekColor(weather.dayOfWeek, weather.date) }}>({weather.dayOfWeek})</Text>
         </Text>
@@ -192,8 +176,7 @@ const WeatherComponent: React.FC = () => {
           <Image source={getWeatherIcon(weather.condition)} style={styles.weatherIcon} />
         )}
 
-         {/* 온도 텍스트에 색상 적용 */}
-         <Text style={[styles.temperatureText, { color: getTemperatureColor(weather.temp) }]}>{weather.temp}°</Text>
+        <Text style={[styles.temperatureText, { color: getTemperatureColor(weather.temp) }]}>{weather.temp}°</Text>
 
         <View style={styles.weatherDetailsContainer}>
           <Text style={styles.minMaxText}>
@@ -229,28 +212,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  weatherIcon: {
-    width: 130,
-    height: 130,
-    marginBottom: 16,
-  },
   loadingText: {
     fontSize: 16,
     color: '#333',
     marginTop: 10,
   },
-  headerContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    alignItems: 'center',
+  cardContainer: {
+    backgroundColor: '#fff', 
+    borderRadius: 10, 
+    padding: 20, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.2, 
+    shadowRadius: 5, 
+    elevation: 3, 
+    margin: 4, 
+    width: '98%',
+    height: 430,
+    alignItems: 'center', 
+  },
+  weatherIcon: {
+    width: 130,
+    height: 130,
+    marginBottom: 12,
   },
   dateText: {
     fontSize: 29,
     color: '#000',
+    marginBottom: 3,
   },
   locationText: {
     fontSize: 26,
+    marginBottom: 14,
     color: '#000',
   },
   temperatureText: {

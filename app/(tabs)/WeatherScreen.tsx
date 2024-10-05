@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import MedicationsScreen from './MedicationsScreen'; // 복용약 컴포넌트
-import MemoScreen from './MemoScreen'; // 메모 컴포넌트
-import NotificationsScreen from './NotificationsScreen'; // 필수 확인사항 컴포넌트
-import TasksScreen from './TasksScreen'; // 일정 컴포넌트
+import { ActivityIndicator, Image, SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native';
+import MediandMemoScreen from './MediandMemoScreen'; // MediandMemoScreen 컴포넌트로 교체
+import TasksAndNotificationsScreen from './TasksAndNotificationsScreen'; // 일정 및 필수 확인사항 컴포넌트 통합
 import WeatherComponent from './WeatherComponent'; // 날씨 컴포넌트
 
 const WeatherScreen: React.FC = () => {
@@ -53,19 +51,11 @@ const WeatherScreen: React.FC = () => {
         {/* 날씨 컴포넌트 */}
         <WeatherComponent />
 
-        {/* 일정 컴포넌트 */}
-        <TasksScreen />
+        {/* 일정 및 필수 확인사항 통합 컴포넌트 */}
+        <TasksAndNotificationsScreen />
 
-        <View style={styles.sideBySideContainer}>
-          {/* 복용약 컴포넌트 */}
-          <MedicationsScreen />
-
-          {/* 메모 컴포넌트 */}
-          <MemoScreen />
-        </View>
-
-        {/* 필수 확인사항 컴포넌트 */}
-        <NotificationsScreen />
+        {/* 복용약 및 메모 통합 컴포넌트 */}
+        <MediandMemoScreen />
       </ScrollView>
     </SafeAreaView>
   );
@@ -86,11 +76,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#333',
-  },
-  sideBySideContainer: {
-    flexDirection: 'row', // 복용약과 메모를 가로로 배치
-    justifyContent: 'space-between', // 양쪽에 배치
-    paddingHorizontal: 10, // 양쪽에 여백 추가
   },
 });
 

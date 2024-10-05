@@ -16,8 +16,6 @@ const TasksScreen: React.FC = () => {
     { id: 2, title: '아들과 전화', isChecked: true, date: '2024-09-22' },
     { id: 3, title: '장보기', isChecked: true, date: '2024-09-22' },
     { id: 4, title: '장보기', isChecked: true, date: '2024-09-22' },
-    { id: 6, title: '회의 준비', isChecked: false, date: '2024-09-23' },
-    { id: 7, title: '미팅 참석', isChecked: false, date: '2024-09-23' },
   ]);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -31,8 +29,6 @@ const TasksScreen: React.FC = () => {
   };
 
   const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
 
   const formatDate = (date: Date): string => {
     const day = date.getDate();
@@ -41,7 +37,6 @@ const TasksScreen: React.FC = () => {
   };
 
   const todayDateStr = formatDate(today);
-  const tomorrowDateStr = formatDate(tomorrow);
 
   const openModal = (date: string) => {
     setSelectedDate(date);
@@ -55,55 +50,32 @@ const TasksScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.cardsContainer}>
-        {/* 오늘 일정 카드 */}
-        <TouchableOpacity onPress={() => openModal('2024-09-22')} style={[styles.card, styles.todayCard]}>
-          <Text style={styles.dateText}>{todayDateStr}</Text>
-          {tasks
-            .filter((task) => task.date === '2024-09-22')
-            .slice(0, 3)
-            .map((task) => (
-              <TouchableOpacity key={task.id} onPress={() => toggleTaskChecked(task.id)} style={styles.item}>
-                <CheckBox
-                  value={task.isChecked}
-                  onValueChange={() => toggleTaskChecked(task.id)}
-                  color={'#007AFF'} // 파란색 체크박스
-                />
-                <Text style={[styles.taskText, task.isChecked && styles.strikeThrough]}>
-                  {task.title}
-                </Text>
+        {/* 흰색 박스 안에 회색 카드 */}
+        <View style={styles.whiteBox}>
+          <TouchableOpacity onPress={() => openModal('2024-09-22')} style={[styles.card, styles.todayCard]}>
+            <Text style={styles.dateText}>{todayDateStr}</Text>
+            {tasks
+              .filter((task) => task.date === '2024-09-22')
+              .slice(0, 3)
+              .map((task) => (
+                <TouchableOpacity key={task.id} onPress={() => toggleTaskChecked(task.id)} style={styles.item}>
+                  <CheckBox
+                    value={task.isChecked}
+                    onValueChange={() => toggleTaskChecked(task.id)}
+                    color={'#007AFF'} // 파란색 체크박스
+                  />
+                  <Text style={[styles.taskText, task.isChecked && styles.strikeThrough]}>
+                    {task.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            {tasks.filter((task) => task.date === '2024-09-22').length > 3 && (
+              <TouchableOpacity onPress={() => openModal('2024-09-22')}>
+                <Text style={styles.moreText}>+ 더 보기</Text>
               </TouchableOpacity>
-            ))}
-          {tasks.filter((task) => task.date === '2024-09-22').length > 3 && (
-            <TouchableOpacity onPress={() => openModal('2024-09-22')}>
-              <Text style={styles.moreText}>+ 더 보기</Text>
-            </TouchableOpacity>
-          )}
-        </TouchableOpacity>
-
-        {/* 내일 일정 카드 */}
-        <TouchableOpacity onPress={() => openModal('2024-09-23')} style={styles.card}>
-          <Text style={styles.dateText}>{tomorrowDateStr}</Text>
-          {tasks
-            .filter((task) => task.date === '2024-09-23')
-            .slice(0, 3)
-            .map((task) => (
-              <TouchableOpacity key={task.id} onPress={() => toggleTaskChecked(task.id)} style={styles.item}>
-                <CheckBox
-                  value={task.isChecked}
-                  onValueChange={() => toggleTaskChecked(task.id)}
-                  color={'#007AFF'} // 파란색 체크박스
-                />
-                <Text style={[styles.taskText, task.isChecked && styles.strikeThrough]}>
-                  {task.title}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          {tasks.filter((task) => task.date === '2024-09-23').length > 3 && (
-            <TouchableOpacity onPress={() => openModal('2024-09-23')}>
-              <Text style={styles.moreText}>+ 더 보기</Text>
-            </TouchableOpacity>
-          )}
-        </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 모달 */}
@@ -116,9 +88,7 @@ const TasksScreen: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ScrollView>
-              <Text style={styles.modalTitle}>
-                {selectedDate === '2024-09-22' ? '오늘의 일정' : '내일의 일정'} (전체)
-              </Text>
+              <Text style={styles.modalTitle}>오늘의 일정 (전체)</Text>
               {tasks
                 .filter((task) => task.date === selectedDate)
                 .map((task) => (
@@ -153,11 +123,21 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+  },
+  whiteBox: {
+    width: '100%', // 흰색 박스의 가로 크기
+    backgroundColor: '#fff', // 흰색 배경
+    borderRadius: 10,
+    padding: 10, // 흰색 박스 내부의 여백
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
   card: {
-    width: '49%', // 카드 가로 크기
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5', // 회색 배경
     borderRadius: 10,
     padding: 20, // 카드 크기를 키우기 위해 패딩을 더 넓게 설정
     shadowColor: '#000',

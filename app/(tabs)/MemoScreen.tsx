@@ -4,9 +4,8 @@ import { Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpac
 
 const MemoScreen: React.FC = () => {
   const [memos, setMemos] = useState([
-    { id: 1, memo: '약 챙기기', isChecked: false, color: '#FFD700' }, 
-    { id: 2, memo: '서류 제출', isChecked: false, color: '#FFD700' }, 
-    { id: 3, memo: '메일 확인', isChecked: false, color: '#FFD700' }, 
+    { id: 1, memo: '서류 제출', isChecked: false, color: '#FFD700' }, 
+    { id: 2, memo: '메일 확인', isChecked: false, color: '#FFD700' }, 
   ]);
 
   const [modalVisible, setModalVisible] = useState(false);

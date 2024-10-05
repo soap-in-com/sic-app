@@ -81,15 +81,21 @@ const ScheduleAndMedicineScreen: React.FC = () => {
   // 날짜 데이터 생성 함수
   function generateDateData(baseDate: Date, numDays: number): DayData[] {
     const dateData: DayData[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 현재 날짜의 자정을 기준으로
+
     for (let i = -numDays; i <= numDays; i++) {
-      const date = getFormattedDate(getDateOffset(baseDate, i));
+      const date = getDateOffset(baseDate, i);
+      date.setHours(0, 0, 0, 0); // 각 날짜도 자정으로 설정
+
       dateData.push({
-        date,
-        isToday: i === 0,
+        date: getFormattedDate(date),
+        isToday: date.getTime() === today.getTime(), // 오늘 날짜인지 비교하여 설정
         medicines: [],
         schedules: [],
       });
     }
+
     return dateData;
   }
 
@@ -189,7 +195,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         setDateData(JSON.parse(storedData)); // 저장된 데이터를 로드하여 상태 업데이트
       }
     } catch (error) {
-      console.error('Failed to load data', error);
+      console.error('데이터 저장을 실패했습니다.', error);
     }
   };
 
