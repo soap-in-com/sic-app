@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'; // 추가된 AsyncStorage import
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -13,9 +13,9 @@ import {
   View,
 } from 'react-native';
 import { CheckBox } from 'react-native-elements';
-import MemoModal from './memo';
-import RegisterMedicineModal from './pilladd';
-import ScheduleAddModal from './scheduleadd';
+import MemoModal from './memo'; // memo.tsx 모달 컴포넌트 가져오기
+import RegisterMedicineModal from './pilladd'; // pilladd.tsx에서 가져온 모달 컴포넌트
+import ScheduleAddModal from './scheduleadd'; // scheduleadd.tsx에서 가져온 모달 컴포넌트
 
 const { width } = Dimensions.get('window');
 
@@ -53,6 +53,7 @@ interface DayData {
   schedules: Schedule[];
 }
 
+// 선택된 항목 상태 타입 정의
 interface SelectedItems {
   medicines: { [label: string]: boolean };
   schedules: { [label: string]: boolean };
@@ -60,44 +61,63 @@ interface SelectedItems {
 
 const ScheduleAndMedicineScreen: React.FC = () => {
   const today = new Date();
-  const medicineFlatListRef = useRef<FlatList>(null);
-  const scheduleFlatListRef = useRef<FlatList>(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [memoModalVisible, setMemoModalVisible] = useState(false);
-  const [scheduleAddModalVisible, setScheduleAddModalVisible] = useState(false);
+  const medicineFlatListRef = useRef<FlatList>(null); // 복용약 FlatList 참조
+  const scheduleFlatListRef = useRef<FlatList>(null); // 일정 FlatList 참조
+  const [modalVisible, setModalVisible] = useState(false); // 모달 상태
+  const [memoModalVisible, setMemoModalVisible] = useState(false); // 메모 모달 상태 추가
+  const [scheduleAddModalVisible, setScheduleAddModalVisible] = useState(false); // 일정 추가 모달 상태 추가
   const [modalType, setModalType] = useState<'medicine' | 'schedule' | null>(
     null
-  );
-  const [dateData, setDateData] = useState<DayData[]>(
-    generateDateData(today, 50)
-  );
-  const [deleteMode, setDeleteMode] = useState(false);
+  ); // 모달 타입
+  const [dateData, setDateData] = useState<DayData[]>(generateDateData(today, 50)); // 날짜 데이터 생성 및 저장
+  const [todayIndex, setTodayIndex] = useState<number>(0);  // 오늘 날짜의 인덱스를 저장하는 상태 추가
+  const [deleteMode, setDeleteMode] = useState(false); // 삭제 모드 상태 추가
   const [selectedItems, setSelectedItems] = useState<{
     [date: string]: SelectedItems;
-  }>({});
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
+  }>({}); // 선택한 항목 상태
+  const [recording, setRecording] = useState<Audio.Recording | null>(null); // 녹음 객체 상태
+  const [isRecording, setIsRecording] = useState(false); // 녹음 상태 관리
 
   // 날짜 데이터 생성 함수
   function generateDateData(baseDate: Date, numDays: number): DayData[] {
     const dateData: DayData[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // 현재 날짜의 자정을 기준으로
-
     for (let i = -numDays; i <= numDays; i++) {
-      const date = getDateOffset(baseDate, i);
-      date.setHours(0, 0, 0, 0); // 각 날짜도 자정으로 설정
-
+      const date = getFormattedDate(getDateOffset(baseDate, i));
       dateData.push({
-        date: getFormattedDate(date),
-        isToday: date.getTime() === today.getTime(), // 오늘 날짜인지 비교하여 설정
+        date,
+        isToday: i === 0, // 오늘 날짜인지 여부
         medicines: [],
         schedules: [],
       });
     }
-
     return dateData;
   }
+
+  // 오늘 날짜의 인덱스를 찾는 함수
+  const findTodayIndex = (data: DayData[]) => {
+    const formattedToday = getFormattedDate(today);  // 오늘 날짜를 포맷팅하여 저장
+    return data.findIndex(day => day.date === formattedToday);  // dateData 배열에서 오늘 날짜와 일치하는 인덱스를 반환
+  };
+
+   // useEffect를 통해 오늘 날짜 인덱스를 설정
+   useEffect(() => {
+    const index = findTodayIndex(dateData);  // 오늘 날짜 인덱스를 계산
+    if (index >= 0) {
+      setTodayIndex(index);  // 계산된 인덱스를 상태에 저장하여 오늘 날짜 인덱스를 설정
+    }
+  }, [dateData]);  // dateData가 변경될 때마다 오늘 날짜 인덱스를 계산
+
+
+ // updateTodayFlag 함수 추가
+ const updateTodayFlag = (data: DayData[]) => {
+  const today = new Date();
+  const formattedToday = getFormattedDate(today);
+
+  return data.map(day => ({
+    ...day,
+    isToday: day.date === formattedToday, // 오늘 날짜인지 확인 후 플래그 설정
+  }));
+};
 
   // 기존 녹음 중지 및 정리
   const stopExistingRecording = async () => {
@@ -115,21 +135,21 @@ const ScheduleAndMedicineScreen: React.FC = () => {
   // 녹음 시작 함수
   const startRecording = async () => {
     try {
-      await stopExistingRecording();
+      await stopExistingRecording(); // 기존 녹음이 있으면 정리
 
       const newRecording = new Audio.Recording();
       await newRecording.prepareToRecordAsync({
         android: {
           extension: '.3gp',
-          outputFormat: 1,
-          audioEncoder: 1,
+          outputFormat: 1, // 1: MPEG_4 format
+          audioEncoder: 1, // 1: AAC LC codec
           sampleRate: 16000,
           numberOfChannels: 1,
           bitRate: 96000,
         },
         ios: {
           extension: '.caf',
-          audioQuality: 127,
+          audioQuality: 127, // High quality
           sampleRate: 16000,
           numberOfChannels: 1,
           bitRate: 128000,
@@ -152,8 +172,38 @@ const ScheduleAndMedicineScreen: React.FC = () => {
 
   // 녹음 중지 함수
   const stopRecording = async () => {
-    await stopExistingRecording();
+    await stopExistingRecording(); // 기존 녹음이 있으면 중지
   };
+
+  // 데이터 저장 함수 (AsyncStorage 사용)
+  const saveDataToStorage = async (data: string) => {
+    try {
+      await AsyncStorage.setItem('scheduleMedicineData', data);
+      console.log('Data saved:', data); // 저장된 데이터를 확인
+    } catch (error) {
+      console.error('Failed to save data to AsyncStorage:', error);
+    }
+  };
+
+  // 데이터 로드 함수
+  const loadDataFromStorage = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+      if (storedData !== null) { 
+        let parsedData = JSON.parse(storedData); // 파싱된 데이터를 저장할 변수 선언
+        parsedData = updateTodayFlag(parsedData); // 오늘 날짜 플래그 업데이트
+        setDateData(parsedData); // 업데이트된 데이터를 상태에 반영
+      }
+    } catch (error) {
+      console.error('Failed to load data from AsyncStorage:', error);
+    }
+  };
+
+    // 초기 데이터 로딩을 위해 useEffect 추가
+  useEffect(() => {
+    // 앱 시작 시 데이터 불러오기
+    loadDataFromStorage();
+  }, []);
 
   // 체크박스 토글 함수
   const toggleCheckBox = (
@@ -170,52 +220,26 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         !newData[dateIndex].schedules[itemIndex].checked;
     }
     setDateData(newData);
-    saveData(newData); // 데이터가 변경될 때마다 저장
-  };
-
-  // 데이터 저장 함수
-  const saveData = async (data: DayData[]) => {
-    try {
-      await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(data));
-    } catch (error) {
-      console.error('Failed to save data', error);
-    }
-  };
-
-  // 앱 로드 시 저장된 데이터 불러오기
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // AsyncStorage에서 데이터 로드하는 함수
-  const loadData = async () => {
-    try {
-      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
-      if (storedData !== null) {
-        setDateData(JSON.parse(storedData)); // 저장된 데이터를 로드하여 상태 업데이트
-      }
-    } catch (error) {
-      console.error('데이터 저장을 실패했습니다.', error);
-    }
+    saveDataToStorage(JSON.stringify(newData)); // 상태 변경 후 저장
   };
 
   // 오늘 날짜로 스크롤 함수
   const scrollToTodayMedicine = () => {
     if (medicineFlatListRef.current) {
-      medicineFlatListRef.current.scrollToIndex({ index: 50, animated: true });
+      medicineFlatListRef.current.scrollToIndex({ index: todayIndex, animated: true });
     }
   };
 
   const scrollToTodaySchedule = () => {
     if (scheduleFlatListRef.current) {
-      scheduleFlatListRef.current.scrollToIndex({ index: 50, animated: true });
+      scheduleFlatListRef.current.scrollToIndex({ index: todayIndex, animated: true });
     }
   };
 
   // 모달 열기 함수
   const openModal = (type: 'medicine' | 'schedule') => {
     setModalType(type);
-    setModalVisible(true);
+    setModalVisible(true); // 모달 열기
   };
 
   // 모달 닫기 함수
@@ -236,13 +260,12 @@ const ScheduleAndMedicineScreen: React.FC = () => {
 
     if (targetIndex !== -1) {
       const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
-
       newData[targetIndex].medicines.push({
         label: label,
         checked: false,
       });
       setDateData(newData);
-      saveData(newData); // 데이터 저장
+      saveDataToStorage(JSON.stringify(newData)); // 상태 저장
     }
 
     closeModal();
@@ -261,42 +284,41 @@ const ScheduleAndMedicineScreen: React.FC = () => {
 
     if (targetIndex !== -1) {
       const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
-
       newData[targetIndex].schedules.push({
         label: label,
         checked: false,
       });
-      setDateData(newData);
-      saveData(newData); // 데이터 저장
+      setDateData(newData); // 상태 업데이트
+      saveDataToStorage(JSON.stringify(newData)); // 상태 저장
     }
 
     closeScheduleAddModal();
   };
 
-  // 일정 추가 모달 열기 함수
-const openScheduleAddModal = () => {
-  setScheduleAddModalVisible(true);
-};
-
-  // 일정 추가 모달 닫기 함수
-  const closeScheduleAddModal = () => {
-    setScheduleAddModalVisible(false);
-  };
-
   // 메모 모달 열기 함수
   const openMemoModal = () => {
-    setMemoModalVisible(true);
+    setMemoModalVisible(true); // 메모 모달 열기
   };
 
   // 메모 모달 닫기 함수
   const closeMemoModal = () => {
-    setMemoModalVisible(false);
+    setMemoModalVisible(false); // 메모 모달 닫기
+  };
+
+  // 일정 추가 모달 열기 함수
+  const openScheduleAddModal = () => {
+    setScheduleAddModalVisible(true); // 일정 추가 모달 열기
+  };
+
+  // 일정 추가 모달 닫기 함수
+  const closeScheduleAddModal = () => {
+    setScheduleAddModalVisible(false); // 일정 추가 모달 닫기
   };
 
   // 삭제 모드 토글 함수
   const toggleDeleteMode = () => {
     setDeleteMode(!deleteMode);
-    setSelectedItems({});
+    setSelectedItems({}); // 선택된 항목 초기화
   };
 
   // 항목 선택 토글 함수 (날짜별로 선택)
@@ -334,9 +356,9 @@ const openScheduleAddModal = () => {
     });
 
     setDateData(newData);
-    saveData(newData); // 삭제 후 데이터 저장
     setDeleteMode(false);
     setSelectedItems({});
+    saveDataToStorage(JSON.stringify(newData)); // 상태 저장
   };
 
   return (
@@ -362,7 +384,6 @@ const openScheduleAddModal = () => {
       )}
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {/* 금일 복용약 */}
         <View style={styles.whiteBox}>
           <TouchableOpacity
             onPress={scrollToTodayMedicine}
@@ -383,7 +404,7 @@ const openScheduleAddModal = () => {
             ref={medicineFlatListRef}
             keyExtractor={(item) => item.date}
             contentContainerStyle={styles.scrollViewContent}
-            initialScrollIndex={50}
+            initialScrollIndex={todayIndex}
             getItemLayout={(data, index) => ({
               length: width * 0.6,
               offset: (width * 0.6 + 16) * index,
@@ -455,7 +476,6 @@ const openScheduleAddModal = () => {
           />
         </View>
 
-        {/* 오늘의 일정 */}
         <View style={styles.whiteBox}>
           <TouchableOpacity
             onPress={scrollToTodaySchedule}
@@ -476,7 +496,7 @@ const openScheduleAddModal = () => {
             ref={scheduleFlatListRef}
             keyExtractor={(item) => item.date}
             contentContainerStyle={styles.scrollViewContent}
-            initialScrollIndex={50}
+            initialScrollIndex={todayIndex}
             getItemLayout={(data, index) => ({
               length: width * 0.6,
               offset: (width * 0.6 + 16) * index,
@@ -548,7 +568,6 @@ const openScheduleAddModal = () => {
           />
         </View>
 
-        {/* 하단 버튼 */}
         <View style={styles.actionContainer}>
           <TouchableOpacity
             style={[
@@ -607,7 +626,8 @@ const openScheduleAddModal = () => {
               deleteMode && styles.disabledButton,
             ]}
             onPress={toggleDeleteMode}
-            disabled={deleteMode}>
+            disabled={deleteMode}
+          >
             <Image
               source={require('../../assets/images/close.png')}
               style={styles.icon}
@@ -616,7 +636,6 @@ const openScheduleAddModal = () => {
           </TouchableOpacity>
         </View>
 
-        {/* 하단 여백 추가 */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
@@ -643,7 +662,7 @@ const openScheduleAddModal = () => {
       <ScheduleAddModal
         visible={scheduleAddModalVisible}
         onClose={closeScheduleAddModal}
-        onSave={handleSaveSchedule} // 일정 저장 함수 연결
+        onSave={handleSaveSchedule}
       />
     </SafeAreaView>
   );
@@ -676,7 +695,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   actionContainerDeleteMode: {
-    marginBottom: 20,
+    marginBottom: 20, // 간격 조정: 삭제 취소 버튼과 금일 복용약 사이의 간격
   },
   headerWithIcon: {
     flexDirection: 'row',
@@ -690,7 +709,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     marginLeft: 5,
-    marginBottom: 14,
+    marginBottom: 14, // 아이콘이 텍스트와 일직선에 맞춰지도록 조정
   },
   sectionHeader: {
     fontSize: 35,

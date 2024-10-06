@@ -1,11 +1,12 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import CheckBox from 'expo-checkbox';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // 일정 데이터 타입 정의
 type Task = {
   id: number;
-  title: string;
+  title: string;  // Title을 저장할 필드
   isChecked: boolean;
   date: string;
 };
@@ -13,19 +14,21 @@ type Task = {
 // 알림 데이터 타입 정의
 type Notification = {
   id: number;
-  message: string;
+  message: string;  // Message를 저장할 필드
   isChecked: boolean;
   color: string;
 };
 
-const TasksAndNotificationsScreen: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, title: '병원가기', isChecked: false, date: '2024-09-22' },
-    { id: 2, title: '아들과 전화하고 빨래개고 빨래 돌리기', isChecked: true, date: '2024-09-22' },
-    { id: 3, title: '장보기', isChecked: true, date: '2024-09-22' },
-    { id: 4, title: '장보기', isChecked: true, date: '2024-09-22' },
-  ]);
+// DayData 타입 정의
+interface DayData {
+  date: string;
+  isToday: boolean;
+  medicines: Task[];
+  schedules: Task[];
+}
 
+const TasksAndNotificationsScreen: React.FC = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([
     { id: 1, message: '가스점검: 불을 꼭 꺼주세요!', isChecked: true, color: '#32CD32' },
     { id: 2, message: '병원 방문 시 주민등록증 챙기기', isChecked: false, color: '#32CD32' },
@@ -34,6 +37,15 @@ const TasksAndNotificationsScreen: React.FC = () => {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedType, setSelectedType] = useState<'tasks' | 'notifications' | null>(null);
+
+  // 날짜 포맷 함수
+  const getFormattedDate = (date: Date): string => {
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const dayOfWeek = days[date.getDay()];
+    return `${month}월 ${day}일(${dayOfWeek})`;
+  };
 
   // 체크박스 상태 변경 함수 (일정)
   const toggleTaskChecked = (id: number) => {
@@ -49,15 +61,38 @@ const TasksAndNotificationsScreen: React.FC = () => {
     );
   };
 
-  const today = new Date();
+   // 오늘의 일정만 필터링하는 함수
+   const loadTodayTasks = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+      console.log('Stored data:', storedData); // 저장된 데이터를 확인
+      
+      if (storedData !== null) {
+        const parsedData: DayData[] = JSON.parse(storedData);
+        const todayFormattedDate = getFormattedDate(new Date()); // 오늘의 날짜를 맞춰서 형식화
 
-  const formatDate = (date: Date): string => {
-    const day = date.getDate();
-    const dayOfWeek = date.toLocaleDateString('ko-KR', { weekday: 'short' });
-    return `${day}일(${dayOfWeek})`;
+        // 오늘의 데이터를 찾아 일정만 필터링
+        const todayData = parsedData.find((day: DayData) => day.date === todayFormattedDate);
+
+        if (todayData) {
+          console.log("오늘의 일정 데이터:", todayData.schedules);  // 불러온 오늘의 일정 데이터를 출력
+          
+          setTasks(todayData.schedules);  // 오늘의 일정을 설정
+        } else {
+          setTasks([]);  // 오늘 일정이 없을 경우 빈 배열로 설정
+          console.log("오늘 일정을 불러올 수 없습니다.");
+        }
+      } else {
+        console.log("저장된 일정 데이터가 없습니다.");
+      }
+    } catch (error) {
+      console.error('Failed to load tasks', error);
+    }
   };
 
-  const todayDateStr = formatDate(today);
+  useEffect(() => {
+    loadTodayTasks();
+  }, []);
 
   const openModal = (type: 'tasks' | 'notifications') => {
     setSelectedType(type);
@@ -82,23 +117,24 @@ const TasksAndNotificationsScreen: React.FC = () => {
         <View style={styles.cardContainer}>
           {/* 오늘 일정 카드 */}
           <TouchableOpacity onPress={() => openModal('tasks')} style={[styles.card, styles.todayCard]}>
-            <Text style={styles.dateText}>{todayDateStr}</Text>
-            {tasks
-              .filter((task) => task.date === '2024-09-22')
-              .slice(0, 3)
-              .map((task) => (
-                <TouchableOpacity key={task.id} onPress={() => toggleTaskChecked(task.id)} style={styles.item}>
+            <Text style={styles.dateText}>{getFormattedDate(new Date())}</Text>
+            {tasks.length > 0 ? (
+              tasks.slice(0, 3).map((task, index) => (
+                <TouchableOpacity key={task.id ? task.id.toString() : index.toString()} onPress={() => toggleTaskChecked(task.id)} style={styles.item}>
                   <CheckBox
                     value={task.isChecked}
                     onValueChange={() => toggleTaskChecked(task.id)}
                     color={'#007AFF'} // 파란색 체크박스
                   />
                   <Text style={[styles.taskText, task.isChecked && styles.strikeThrough]}>
-                    {task.title}
+                    {task.title || '일정을 불러올 수 없습니다.'}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            {tasks.filter((task) => task.date === '2024-09-22').length > 3 && (
+              ))
+            ) : (
+              <Text style={styles.noTasksText}>일정이 없습니다</Text> // 일정이 없는 경우
+            )}
+            {tasks.length > 3 && (
               <TouchableOpacity onPress={() => openModal('tasks')}>
                 <Text style={styles.moreText}>+ 더 보기</Text>
               </TouchableOpacity>
@@ -106,19 +142,18 @@ const TasksAndNotificationsScreen: React.FC = () => {
           </TouchableOpacity>
 
           {/* 필수 확인사항 카드 */}
-          <TouchableOpacity onPress={() => openModal('notifications')} style={styles.card}>
+          <TouchableOpacity onPress={() => openModal('notifications')} style={[styles.card, styles.notificationsCard]}>
             <Text style={styles.title}>필수 확인사항 ✅</Text>
-            {notifications.slice(0, 3).map((notif) => (
-              <View key={notif.id.toString()} style={styles.item}>
+            {notifications.slice(0, 3).map((notif, index) => (
+              <View key={notif.id ? notif.id.toString() : index.toString()} style={styles.item}>
                 <CheckBox
                   value={notif.isChecked}
                   onValueChange={() => toggleNotificationChecked(notif.id)}
                   color={notif.color} // 항목에 따라 색상 지정
                   style={styles.checkbox}
                 />
-                {/* 여기서 flexWrap과 flexShrink 추가 */}
                 <Text style={[styles.cardText, notif.isChecked && styles.strikeThrough, { flexWrap: 'wrap', flexShrink: 1 }]}>
-                  {notif.message}
+                  {notif.message || '내용을 불러올 수 없습니다.'}
                 </Text>
               </View>
             ))}
@@ -147,24 +182,24 @@ const TasksAndNotificationsScreen: React.FC = () => {
               </Text>
               {(selectedType === 'notifications' ? notifications : tasks).map((item) =>
                 isNotification(item) ? (
-                  <TouchableOpacity key={item.id.toString()} onPress={() => toggleNotificationChecked(item.id)} style={styles.item}>
+                  <TouchableOpacity key={item.id?.toString()} onPress={() => toggleNotificationChecked(item.id)} style={styles.item}>
                     <CheckBox
                       value={item.isChecked}
                       onValueChange={() => toggleNotificationChecked(item.id)}
                       color={item.color}
                       style={styles.checkbox}
                     />
-                    <Text style={[styles.modalText, item.isChecked && styles.strikeThrough]}>{item.message}</Text>
+                    <Text style={[styles.modalText, item.isChecked && styles.strikeThrough]}>{item.message || '내용을 불러올 수 없습니다.'}</Text>
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity key={item.id.toString()} onPress={() => toggleTaskChecked(item.id)} style={styles.item}>
+                  <TouchableOpacity key={item.id?.toString()} onPress={() => toggleTaskChecked(item.id)} style={styles.item}>
                     <CheckBox
                       value={item.isChecked}
                       onValueChange={() => toggleTaskChecked(item.id)}
                       color={'#007AFF'}
                       style={styles.checkbox}
                     />
-                    <Text style={[styles.modalText, item.isChecked && styles.strikeThrough]}>{item.title}</Text>
+                    <Text style={[styles.modalText, item.isChecked && styles.strikeThrough]}>{item.title || '일정을 불러올 수 없습니다.'}</Text>
                   </TouchableOpacity>
                 )
               )}
@@ -221,6 +256,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#007AFF', // 파란 테두리 색상 적용
   },
+  notificationsCard: {
+    borderWidth: 2, // 필수 확인사항 카드에 테두리 적용
+    borderColor: '#32CD32', // 테두리 색상을 초록색으로 설정 (필수 확인사항 카드)
+  },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -254,6 +293,12 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     color: 'gray',
   },
+  noTasksText: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#707070',
+    marginTop: 10,
+  },
   moreText: {
     marginTop: 10,
     fontSize: 18,
@@ -283,6 +328,9 @@ const styles = StyleSheet.create({
   modalText: {
     marginLeft: 10,
     fontSize: 28,
+    flexWrap: 'wrap', // 텍스트가 길면 줄바꿈
+    flexShrink: 1, // 길면 줄어듦
+    width: '90%', // 텍스트의 최대 너비 설정
   },
   closeButton: {
     borderRadius: 12,

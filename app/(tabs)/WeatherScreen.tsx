@@ -68,13 +68,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   weatherIcon: {
-    width: 100,
-    height: 100,
+    width: 130,
+    height: 130,
     marginBottom: 20,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
+    fontWeight: 'bold',
     color: '#333',
   },
 });

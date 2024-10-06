@@ -80,10 +80,10 @@ const WeatherComponent: React.FC = () => {
   };
 
   const getPreparednessMessage = (temp: number, condition: string, pm10: number) => {
-    if (temp >= 33) return { message: '날씨가 너무 더우니 외출을 자제해주세요.', icon: require('../../assets/images/temperature.png') };
-    if (condition === 'Rain') return { message: '비가 오고 있으니 우산을 준비해주세요.', icon: require('../../assets/images/umbrella.png') };
-    if (condition === 'Snow' || temp < 0) return { message: '날씨가 너무 추우니 옷을 따뜻하게 입어주세요.', icon: require('../../assets/images/muffler.png') };
-    if (pm10 > 80) return { message: '미세먼지 농도가 좋지 않으니 마스크를 착용해주세요.', icon: require('../../assets/images/mask.png') };
+    if (temp >= 33) return { message: '날씨가 너무 더우니 외출을 자제해주세요!', icon: require('../../assets/images/temperature.png') };
+    if (condition === 'Rain') return { message: '비가 오고 있으니 우산을 준비해주세요!', icon: require('../../assets/images/umbrella.png') };
+    if (condition === 'Snow' || temp < 0) return { message: '날씨가 너무 추우니 옷을 따뜻하게 입어주세요!', icon: require('../../assets/images/muffler.png') };
+    if (pm10 > 80) return { message: '미세먼지 농도가 좋지 않으니 마스크를 착용해주세요!', icon: require('../../assets/images/mask.png') };
     return { message: '', icon: null };
   };
 
@@ -269,16 +269,18 @@ const styles = StyleSheet.create({
   preparednessContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 1,
   },
   preparednessMessage: {
-    fontSize: 18,
-    color: 'orange',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'green',
   },
   preparednessIcon: {
-    width: 24,
-    height: 24,
-    marginLeft: 10,
+    width: 30,
+    height: 30,
+    marginLeft: 4,
+  
   },
 });
 
