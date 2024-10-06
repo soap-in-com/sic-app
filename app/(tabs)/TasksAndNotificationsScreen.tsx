@@ -9,6 +9,7 @@ type Task = {
   title: string;  // Title을 저장할 필드
   isChecked: boolean;
   date: string;
+  label?: string;  // label 속성을 선택적으로 추가
 };
 
 // 알림 데이터 타입 정의
@@ -70,14 +71,19 @@ const TasksAndNotificationsScreen: React.FC = () => {
       if (storedData !== null) {
         const parsedData: DayData[] = JSON.parse(storedData);
         const todayFormattedDate = getFormattedDate(new Date()); // 오늘의 날짜를 맞춰서 형식화
-
         // 오늘의 데이터를 찾아 일정만 필터링
         const todayData = parsedData.find((day: DayData) => day.date === todayFormattedDate);
 
-        if (todayData) {
+        if (todayData && todayData.schedules ) {
           console.log("오늘의 일정 데이터:", todayData.schedules);  // 불러온 오늘의 일정 데이터를 출력
-          
-          setTasks(todayData.schedules);  // 오늘의 일정을 설정
+          const tasks = todayData.schedules.map((schedule, index) => ({
+            id: index,
+            title: schedule.label || '',
+            isChecked: schedule.isChecked,
+            date: todayFormattedDate,  // date 속성 추가
+          }));
+        
+          setTasks(tasks);  // 오늘의 일정을 설정
         } else {
           setTasks([]);  // 오늘 일정이 없을 경우 빈 배열로 설정
           console.log("오늘 일정을 불러올 수 없습니다.");
@@ -92,7 +98,7 @@ const TasksAndNotificationsScreen: React.FC = () => {
 
   useEffect(() => {
     loadTodayTasks();
-  }, []);
+  }, [tasks]);
 
   const openModal = (type: 'tasks' | 'notifications') => {
     setSelectedType(type);

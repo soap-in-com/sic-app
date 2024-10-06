@@ -83,7 +83,7 @@ const MemoScreen: React.FC = () => {
                     color={memo.color}
                     style={styles.checkbox}
                   />
-                  <Text style={[styles.modalText, memo.isChecked && styles.strikeThrough]}>
+                  <Text style={[styles.modalText, memo.isChecked && styles.strikeThrough, { flexWrap: 'wrap', flexShrink: 1 }]}>
                     {memo.memo}
                   </Text>
                 </TouchableOpacity>
@@ -180,7 +180,7 @@ const MedicationsScreen: React.FC = () => {
                     color="#FFA500"
                     style={styles.checkbox}
                   />
-                  <Text style={[styles.modalText, med.isChecked && styles.strikeThrough]}>
+                  <Text style={[styles.modalText, med.isChecked && styles.strikeThrough,  { flexWrap: 'wrap', flexShrink: 1 }]}>
                     {med.name}
                   </Text>
                 </TouchableOpacity>
