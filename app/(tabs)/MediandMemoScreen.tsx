@@ -19,13 +19,26 @@ interface Memo {
 }
 
 const MemoScreen: React.FC = () => {
-  const [memos, setMemos] = useState<Memo[]>([
-    { id: 1, memo: '서류 제출', isChecked: false, color: '#FFD700' },
-    { id: 2, memo: '메일 확인', isChecked: false, color: '#FFD700' },
-    { id: 3, memo: '회의 참석', isChecked: false, color: '#FFD700' },
-    { id: 4, memo: '전화하기', isChecked: false, color: '#FFD700' },
-  ]);
+  const [memos, setMemos] = useState<Memo[]>([]); // 초기 메모 배열을 빈 배열로 수정
   const [modalVisible, setModalVisible] = useState(false);
+
+  useEffect(() => {
+    const loadMemos = async () => {
+      const today = new Date().toISOString().split('T')[0]; // 오늘의 날짜 (YYYY-MM-DD 형식)
+      try {
+        const savedMemos = await AsyncStorage.getItem(`memo_${today}`);
+        if (savedMemos) {
+          setMemos(JSON.parse(savedMemos));
+        } else {
+          setMemos([]); // 저장된 메모가 없을 경우 빈 배열로 설정
+        }
+      } catch (error) {
+        console.error('메모 불러오기를 실패하였습니다.', error);
+      }
+    };
+
+    loadMemos();
+  }, []);
 
   const toggleMemoChecked = (id: number) => {
     setMemos((prevMemos) =>

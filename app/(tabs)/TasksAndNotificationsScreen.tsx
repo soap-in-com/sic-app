@@ -98,7 +98,7 @@ const TasksAndNotificationsScreen: React.FC = () => {
 
   useEffect(() => {
     loadTodayTasks();
-  }, [tasks]);
+  }, []);
 
   const openModal = (type: 'tasks' | 'notifications') => {
     setSelectedType(type);
