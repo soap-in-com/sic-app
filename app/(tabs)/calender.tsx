@@ -37,11 +37,13 @@ const getDateOffset = (baseDate: Date, offset: number): Date => {
 
 // 타입 정의
 interface Medicine {
+  id: number; // 고유 ID 추가
   label: string;
   checked: boolean;
 }
 
 interface Schedule {
+  id: number;  // 고유 ID 필드 추가
   label: string;
   checked: boolean;
 }
@@ -190,6 +192,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     try {
       const storedData = await AsyncStorage.getItem('scheduleMedicineData');
       if (storedData !== null) { 
+        console.log('Loaded Data:', storedData);  // 로그로 불러온 데이터 확인
         let parsedData = JSON.parse(storedData); // 파싱된 데이터를 저장할 변수 선언
         parsedData = updateTodayFlag(parsedData); // 오늘 날짜 플래그 업데이트
         setDateData(parsedData); // 업데이트된 데이터를 상태에 반영
@@ -248,28 +251,46 @@ const ScheduleAndMedicineScreen: React.FC = () => {
   };
 
   // 약 저장 후 상태 업데이트 함수
-  const handleSaveMedicine = (data: {
+  const handleSaveMedicine = async (data: {
     name: string;
     date: string;
     time: string;
   }) => {
     const newData = [...dateData];
-
     const formattedDate = getFormattedDate(new Date(data.date));
     const targetIndex = newData.findIndex((day) => day.date === formattedDate);
-
+  
     if (targetIndex !== -1) {
       const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
-      newData[targetIndex].medicines.push({
-        label: label,
-        checked: false,
-      });
-      setDateData(newData);
-      saveDataToStorage(JSON.stringify(newData)); // 상태 저장
-    }
+      const medicationId = Date.now(); // 고유 ID 생성
 
-    closeModal();
-  };
+
+      // Medicine 객체로 복용약 데이터를 추가
+    newData[targetIndex].medicines.push({
+      id: medicationId,
+      label: label,
+      checked: false,
+    });
+
+     // 전체 복용약 데이터를 가져와 업데이트
+     try {
+      const allMedicationsString = await AsyncStorage.getItem('allMedications');
+      const allMedications = allMedicationsString ? JSON.parse(allMedicationsString) : {};
+
+      // 해당 날짜의 복용약 데이터를 업데이트
+      allMedications[formattedDate] = newData[targetIndex].medicines;
+
+      // 전체 복용약 데이터를 다시 저장
+      await AsyncStorage.setItem('allMedications', JSON.stringify(allMedications));
+    } catch (error) {
+      console.error('복용약 데이터를 저장하는 중 오류가 발생했습니다:', error);
+    }
+  }
+  
+  closeModal();
+};
+
+
 
   // 일정 저장 후 상태 업데이트 함수
   const handleSaveSchedule = (data: {
@@ -284,7 +305,10 @@ const ScheduleAndMedicineScreen: React.FC = () => {
 
     if (targetIndex !== -1) {
       const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
+      const scheduleId = Date.now(); // 고유 ID 추가
+      
       newData[targetIndex].schedules.push({
+        id: scheduleId, // 고유 ID 추가
         label: label,
         checked: false,
       });

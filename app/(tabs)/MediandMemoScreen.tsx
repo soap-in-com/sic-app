@@ -11,6 +11,12 @@ interface Medication {
   isChecked: boolean;
 }
 
+interface DayData {
+  date: string;         // 날짜 (YYYY-MM-DD 형식)
+  isToday: boolean;     // 오늘 날짜 여부
+  medicines: Medication[]; // 복용약 배열
+}
+
 interface Memo {
   id: number;
   memo: string;
@@ -62,8 +68,8 @@ const MemoScreen: React.FC = () => {
             <Text style={styles.title}>오늘의 메모</Text>
             <Image source={require('../../assets/images/memo.png')} style={styles.icon} />
           </View>
-          {memos.slice(0, 3).map((memo) => (
-            <TouchableOpacity key={memo.id.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
+          {memos.slice(0, 3).map((memo, index) => (
+            <TouchableOpacity key={memo.id !== undefined ? memo.id.toString() : index.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
               <CheckBox
                 value={memo.isChecked}
                 onValueChange={() => toggleMemoChecked(memo.id)}
@@ -88,8 +94,8 @@ const MemoScreen: React.FC = () => {
           <View style={styles.modalContent}>
             <ScrollView>
               <Text style={styles.modalTitle}>오늘의 메모</Text>
-              {memos.map((memo) => (
-                <TouchableOpacity key={memo.id.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
+              {memos.map((memo, index) => (
+                <TouchableOpacity key={memo.id!== undefined ? memo.id.toString() : index.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
                   <CheckBox
                     value={memo.isChecked}
                     onValueChange={() => toggleMemoChecked(memo.id)}
@@ -113,26 +119,47 @@ const MemoScreen: React.FC = () => {
 };
 
 const MedicationsScreen: React.FC = () => {
-  const [medications, setMedications] = useState<Medication[]>([
-    { id: 1, name: '약 먹기', isChecked: false },
-    { id: 2, name: '운동하기', isChecked: false },
-    { id: 3, name: '미팅 참석', isChecked: false },
-  ]);
+  const [medications, setMedications] = useState<Medication[]>([]);  // 빈 배열로 초기화
   const [modalVisible, setModalVisible] = useState(false);
 
-  useEffect(() => {
-    const loadMedications = async () => {
-      try {
-        const savedMedications = await AsyncStorage.getItem('medications');
-        if (savedMedications) {
-          setMedications(JSON.parse(savedMedications));
-        }
-      } catch (error) {
-        console.error('복용약 불러오기를 실패하였습니다.', error);
-      }
-    };
+  // 날짜 포맷 함수
+  const getFormattedDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // 두 자리로 포맷
+    const day = String(date.getDate()).padStart(2, '0'); // 두 자리로 포맷
+    return `${year}-${month}-${day}`; // YYYY-MM-DD 형식으로 포맷팅
+  };
 
-    loadMedications();
+  // 복용약 데이터를 불러오는 함수
+  const loadTodayMedications = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+      console.log('Stored data:', storedData); // 저장된 데이터를 확인
+      
+      if (storedData !== null) {
+        const parsedData: DayData[] = JSON.parse(storedData);
+        const todayFormattedDate = getFormattedDate(new Date()); // 오늘의 날짜를 맞춰서 형식화
+
+        // 오늘의 데이터를 찾아 복용약만 필터링
+        const todayData = parsedData.find((day: DayData) => day.date === todayFormattedDate);
+
+        if (todayData && todayData.medicines) {
+          console.log("오늘의 복용약 데이터:", todayData.medicines);  // 불러온 오늘의 복용약 데이터를 출력
+          setMedications(todayData.medicines);  // 오늘의 복용약을 설정
+        } else {
+          setMedications([]);  // 오늘 복용약이 없을 경우 빈 배열로 설정
+          console.log("오늘 복용약을 불러올 수 없습니다.");
+        }
+      } else {
+        console.log("저장된 복용약 데이터가 없습니다.");
+      }
+    } catch (error) {
+      console.error('복용약 데이터를 불러오는 중 오류가 발생했습니다:', error);
+    }
+  };
+
+    useEffect(() => {
+      loadTodayMedications();
   }, []);
 
   const toggleMedicationChecked = (id: number) => {
@@ -140,7 +167,12 @@ const MedicationsScreen: React.FC = () => {
       med.id === id ? { ...med, isChecked: !med.isChecked } : med
     );
     setMedications(updatedMedications);
-    AsyncStorage.setItem('medications', JSON.stringify(updatedMedications));
+
+     // 변경된 데이터를 AsyncStorage에 저장
+     const today = getFormattedDate(new Date());
+    AsyncStorage.setItem('medications', JSON.stringify(updatedMedications))
+    .then(() => console.log('복용약 데이터가 저장되었습니다.'))
+      .catch((error) => console.error('복용약 저장 중 오류가 발생했습니다.', error));
   };
 
   const openModal = () => {
