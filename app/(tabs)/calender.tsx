@@ -37,15 +37,19 @@ const getDateOffset = (baseDate: Date, offset: number): Date => {
 
 // 타입 정의
 interface Medicine {
-  id: number; // 고유 ID 추가
   label: string;
   checked: boolean;
 }
 
 interface Schedule {
-  id: number;  // 고유 ID 필드 추가
   label: string;
   checked: boolean;
+}
+
+interface Memo {
+  id: number;
+  memo: string;
+  isChecked: boolean;
 }
 
 interface DayData {
@@ -53,6 +57,7 @@ interface DayData {
   isToday: boolean;
   medicines: Medicine[];
   schedules: Schedule[];
+  memos?: Memo[];
 }
 
 // 선택된 항목 상태 타입 정의
@@ -70,15 +75,93 @@ const ScheduleAndMedicineScreen: React.FC = () => {
   const [scheduleAddModalVisible, setScheduleAddModalVisible] = useState(false); // 일정 추가 모달 상태 추가
   const [modalType, setModalType] = useState<'medicine' | 'schedule' | null>(
     null
-  ); // 모달 타입
-  const [dateData, setDateData] = useState<DayData[]>(generateDateData(today, 50)); // 날짜 데이터 생성 및 저장
-  const [todayIndex, setTodayIndex] = useState<number>(0);  // 오늘 날짜의 인덱스를 저장하는 상태 추가
+  ); 
+  
+  // 모달 타입
+  const [dateData, setDateData] = useState<DayData[]>(
+    generateDateData(today, 50)
+  ); // 날짜 데이터
   const [deleteMode, setDeleteMode] = useState(false); // 삭제 모드 상태 추가
   const [selectedItems, setSelectedItems] = useState<{
     [date: string]: SelectedItems;
   }>({}); // 선택한 항목 상태
   const [recording, setRecording] = useState<Audio.Recording | null>(null); // 녹음 객체 상태
   const [isRecording, setIsRecording] = useState(false); // 녹음 상태 관리
+  const [todayMemo, setTodayMemo] = useState<Memo[]>([]); // 오늘 날짜의 메모 상태
+
+  // 오늘의 메모를 불러오는 함수
+  const loadTodayMemo = async () => {
+    try {
+      // 저장된 데이터 가져오기
+      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        
+        // 오늘 날짜를 형식에 맞게 포맷팅
+        const todayFormatted = getFormattedDate(new Date());
+
+        // 저장된 데이터에서 오늘 날짜에 해당하는 데이터를 찾고, 메모를 추출
+        const todayData = parsedData.find((day: DayData) => day.date === todayFormatted);
+        const memosForToday = todayData?.memos || []; // 메모가 없을 경우 빈 배열로 대체
+
+        // 오늘 날짜의 메모 상태를 업데이트
+        setTodayMemo(memosForToday);
+      }
+    } catch (error) {
+      console.error("Error loading memo data:", error);
+    }
+  };
+
+  // 컴포넌트가 로드되면 오늘의 메모를 불러오는 useEffect
+  useEffect(() => {
+    console.log('Generated Date Data:', generateDateData(today, 50));
+    initializeDataIfEmpty();
+    loadTodayMemo();        // 오늘의 메모 로드
+  }, []);
+
+  const loadDataFromStorage = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        if (parsedData.length === 0) {
+          console.log('Empty data, initializing default data');
+          const initialData = generateDateData(new Date(), 50);
+          setDateData(initialData);
+          await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(initialData));
+        } else {
+          console.log('Loaded data from storage:', parsedData);  // 데이터 확인
+          setDateData(parsedData); // 저장된 데이터가 있으면 로드
+        }
+      } else {
+        // 저장된 데이터가 없을 경우 기본 데이터로 초기화
+        const initialData = generateDateData(new Date(), 50);
+        setDateData(initialData);
+        await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(initialData));
+        console.log('Initialized and saved default data');
+      }
+    } catch (error) {
+      console.error("Error loading data from AsyncStorage:", error);
+    }
+  };
+  
+  const initializeDataIfEmpty = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+      if (!storedData) {
+        // 저장된 데이터가 없을 경우 기본 데이터 생성 및 저장
+        const initialData = generateDateData(new Date(), 50);
+        await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(initialData));
+        setDateData(initialData);
+        console.log('Initialized and saved default data');
+      } else {
+        await loadDataFromStorage();  // 저장된 데이터가 있으면 기존 로드 로직 호출
+      }
+    } catch (error) {
+      console.error('Error initializing data:', error);
+    }
+  };
+  
 
   // 날짜 데이터 생성 함수
   function generateDateData(baseDate: Date, numDays: number): DayData[] {
@@ -90,36 +173,11 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         isToday: i === 0, // 오늘 날짜인지 여부
         medicines: [],
         schedules: [],
+        memos: []
       });
     }
     return dateData;
   }
-
-  // 오늘 날짜의 인덱스를 찾는 함수
-  const findTodayIndex = (data: DayData[]) => {
-    const formattedToday = getFormattedDate(today);  // 오늘 날짜를 포맷팅하여 저장
-    return data.findIndex(day => day.date === formattedToday);  // dateData 배열에서 오늘 날짜와 일치하는 인덱스를 반환
-  };
-
-   // useEffect를 통해 오늘 날짜 인덱스를 설정
-   useEffect(() => {
-    const index = findTodayIndex(dateData);  // 오늘 날짜 인덱스를 계산
-    if (index >= 0) {
-      setTodayIndex(index);  // 계산된 인덱스를 상태에 저장하여 오늘 날짜 인덱스를 설정
-    }
-  }, [dateData]);  // dateData가 변경될 때마다 오늘 날짜 인덱스를 계산
-
-
- // updateTodayFlag 함수 추가
- const updateTodayFlag = (data: DayData[]) => {
-  const today = new Date();
-  const formattedToday = getFormattedDate(today);
-
-  return data.map(day => ({
-    ...day,
-    isToday: day.date === formattedToday, // 오늘 날짜인지 확인 후 플래그 설정
-  }));
-};
 
   // 기존 녹음 중지 및 정리
   const stopExistingRecording = async () => {
@@ -177,37 +235,6 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     await stopExistingRecording(); // 기존 녹음이 있으면 중지
   };
 
-  // 데이터 저장 함수 (AsyncStorage 사용)
-  const saveDataToStorage = async (data: string) => {
-    try {
-      await AsyncStorage.setItem('scheduleMedicineData', data);
-      console.log('Data saved:', data); // 저장된 데이터를 확인
-    } catch (error) {
-      console.error('Failed to save data to AsyncStorage:', error);
-    }
-  };
-
-  // 데이터 로드 함수
-  const loadDataFromStorage = async () => {
-    try {
-      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
-      if (storedData !== null) { 
-        console.log('Loaded Data:', storedData);  // 로그로 불러온 데이터 확인
-        let parsedData = JSON.parse(storedData); // 파싱된 데이터를 저장할 변수 선언
-        parsedData = updateTodayFlag(parsedData); // 오늘 날짜 플래그 업데이트
-        setDateData(parsedData); // 업데이트된 데이터를 상태에 반영
-      }
-    } catch (error) {
-      console.error('Failed to load data from AsyncStorage:', error);
-    }
-  };
-
-    // 초기 데이터 로딩을 위해 useEffect 추가
-  useEffect(() => {
-    // 앱 시작 시 데이터 불러오기
-    loadDataFromStorage();
-  }, []);
-
   // 체크박스 토글 함수
   const toggleCheckBox = (
     dateIndex: number,
@@ -223,19 +250,19 @@ const ScheduleAndMedicineScreen: React.FC = () => {
         !newData[dateIndex].schedules[itemIndex].checked;
     }
     setDateData(newData);
-    saveDataToStorage(JSON.stringify(newData)); // 상태 변경 후 저장
   };
+
 
   // 오늘 날짜로 스크롤 함수
   const scrollToTodayMedicine = () => {
-    if (medicineFlatListRef.current) {
-      medicineFlatListRef.current.scrollToIndex({ index: todayIndex, animated: true });
+    if (dateData.length > 0 && medicineFlatListRef.current) {
+      medicineFlatListRef.current.scrollToIndex({ index: 50, animated: true });
     }
   };
 
   const scrollToTodaySchedule = () => {
-    if (scheduleFlatListRef.current) {
-      scheduleFlatListRef.current.scrollToIndex({ index: todayIndex, animated: true });
+    if (dateData.length > 0 && scheduleFlatListRef.current) {
+      scheduleFlatListRef.current.scrollToIndex({ index: 50, animated: true });
     }
   };
 
@@ -257,66 +284,86 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     time: string;
   }) => {
     const newData = [...dateData];
+
+    // 날짜 형식이 'YYYY-MM-DD'라면 해당 날짜의 인덱스를 찾음
     const formattedDate = getFormattedDate(new Date(data.date));
     const targetIndex = newData.findIndex((day) => day.date === formattedDate);
-  
+
     if (targetIndex !== -1) {
+      // 시간과 이름만 저장
       const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
-      const medicationId = Date.now(); // 고유 ID 생성
 
-
-      // Medicine 객체로 복용약 데이터를 추가
-    newData[targetIndex].medicines.push({
-      id: medicationId,
-      label: label,
-      checked: false,
-    });
-
-     // 전체 복용약 데이터를 가져와 업데이트
-     try {
-      const allMedicationsString = await AsyncStorage.getItem('allMedications');
-      const allMedications = allMedicationsString ? JSON.parse(allMedicationsString) : {};
-
-      // 해당 날짜의 복용약 데이터를 업데이트
-      allMedications[formattedDate] = newData[targetIndex].medicines;
-
-      // 전체 복용약 데이터를 다시 저장
-      await AsyncStorage.setItem('allMedications', JSON.stringify(allMedications));
+      newData[targetIndex].medicines.push({
+        label: label, // 라벨 생성
+        checked: false,
+      });
+      setDateData(newData);
+    
+      // 데이터가 변경되면 즉시 AsyncStorage에 저장
+    try {
+      await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(newData));
+      console.log('Data successfully saved');
     } catch (error) {
-      console.error('복용약 데이터를 저장하는 중 오류가 발생했습니다:', error);
+      console.error("Error saving medicine data:", error);
     }
   }
-  
-  closeModal();
-};
 
-
+    closeModal(); // 모달 닫기
+  };
 
   // 일정 저장 후 상태 업데이트 함수
-  const handleSaveSchedule = (data: {
+  const handleSaveSchedule = async (data: {
     name: string;
     date: string;
     time: string;
   }) => {
     const newData = [...dateData];
 
+    // 날짜 형식이 'YYYY-MM-DD'라면 해당 날짜의 인덱스를 찾음
     const formattedDate = getFormattedDate(new Date(data.date));
     const targetIndex = newData.findIndex((day) => day.date === formattedDate);
 
     if (targetIndex !== -1) {
+      // 시간과 이름만 저장
       const label = `${data.name}${data.time ? ` (${data.time})` : ''}`;
-      const scheduleId = Date.now(); // 고유 ID 추가
-      
+
       newData[targetIndex].schedules.push({
-        id: scheduleId, // 고유 ID 추가
-        label: label,
+        label: label, // 라벨 생성
         checked: false,
       });
       setDateData(newData); // 상태 업데이트
-      saveDataToStorage(JSON.stringify(newData)); // 상태 저장
+
+    // AsyncStorage에 데이터 저장
+    try {
+      await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(newData));
+    } catch (error) {
+      console.error("Error saving schedule data to AsyncStorage:", error);
+    }
+  }
+    closeScheduleAddModal(); // 일정 추가 모달 닫기
+  };
+
+  const handleSaveMemo = async (memoData: { id: number, memo: string, isChecked: boolean }) => {
+    const newData = [...dateData];
+    const formattedDate = getFormattedDate(new Date()); // 오늘 날짜 가져오기
+    const targetIndex = newData.findIndex((day) => day.date === formattedDate);
+  
+    if (targetIndex !== -1) {
+     // memos 배열이 존재하지 않으면 빈 배열로 초기화
+    if (!newData[targetIndex].memos) {
+      newData[targetIndex].memos = [];
     }
 
-    closeScheduleAddModal();
+     // 새 메모 추가
+     newData[targetIndex].memos.push(memoData);
+     setDateData(newData);
+  
+      try {
+        await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(newData));
+      } catch (error) {
+        console.error("Error saving memo data:", error);
+      }
+    }
   };
 
   // 메모 모달 열기 함수
@@ -382,11 +429,11 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     setDateData(newData);
     setDeleteMode(false);
     setSelectedItems({});
-    saveDataToStorage(JSON.stringify(newData)); // 상태 저장
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* 삭제 및 취소 버튼을 화면 상단으로 이동 */}
       {deleteMode && (
         <View
           style={[styles.actionContainer, styles.actionContainerDeleteMode]}
@@ -408,6 +455,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
       )}
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        {/* 금일 복용약 */}
         <View style={styles.whiteBox}>
           <TouchableOpacity
             onPress={scrollToTodayMedicine}
@@ -428,7 +476,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             ref={medicineFlatListRef}
             keyExtractor={(item) => item.date}
             contentContainerStyle={styles.scrollViewContent}
-            initialScrollIndex={todayIndex}
+            initialScrollIndex={50}
             getItemLayout={(data, index) => ({
               length: width * 0.6,
               offset: (width * 0.6 + 16) * index,
@@ -458,14 +506,14 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                               medicine.checked ? '#FF6F00' : undefined
                             }
                             containerStyle={styles.checkBoxContainer}
-                            size={40}
+                            size={40} // 체크박스 크기 키움
                           />
                         )}
                         <Text
                           style={[
                             styles.medicineText,
                             medicine.checked && styles.checkedText,
-                            { flexWrap: 'wrap', flexShrink: 1 },
+                            { flexWrap: 'wrap', flexShrink: 1 }, // 추가된 속성
                           ]}
                         >
                           {medicine.label}
@@ -500,6 +548,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
           />
         </View>
 
+        {/* 오늘의 일정 */}
         <View style={styles.whiteBox}>
           <TouchableOpacity
             onPress={scrollToTodaySchedule}
@@ -520,7 +569,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             ref={scheduleFlatListRef}
             keyExtractor={(item) => item.date}
             contentContainerStyle={styles.scrollViewContent}
-            initialScrollIndex={todayIndex}
+            initialScrollIndex={50}
             getItemLayout={(data, index) => ({
               length: width * 0.6,
               offset: (width * 0.6 + 16) * index,
@@ -546,18 +595,16 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                             onPress={() =>
                               toggleCheckBox(dateIndex, 'schedule', idx)
                             }
-                            checkedColor={
-                              schedule.checked ? 'blue' : undefined
-                            }
+                            checkedColor={schedule.checked ? 'blue' : undefined}
                             containerStyle={styles.checkBoxContainer}
-                            size={40}
+                            size={40} // 체크박스 크기 키움
                           />
                         )}
                         <Text
                           style={[
                             styles.scheduleText,
                             schedule.checked && styles.checkedText,
-                            { flexWrap: 'wrap', flexShrink: 1 },
+                            { flexWrap: 'wrap', flexShrink: 1 }, // 추가된 속성
                           ]}
                         >
                           {schedule.label}
@@ -592,6 +639,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
           />
         </View>
 
+        {/* 하단 버튼 */}
         <View style={styles.actionContainer}>
           <TouchableOpacity
             style={[
@@ -600,7 +648,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
               deleteMode && styles.disabledButton,
             ]}
             onPress={() => openModal('medicine')}
-            disabled={deleteMode}
+            disabled={deleteMode} // 삭제 모드일 때 비활성화
           >
             <Image
               source={require('../../assets/images/pill.png')}
@@ -616,7 +664,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
               deleteMode && styles.disabledButton,
             ]}
             onPress={openScheduleAddModal}
-            disabled={deleteMode}
+            disabled={deleteMode} // 삭제 모드일 때 비활성화
           >
             <Image
               source={require('../../assets/images/check.png')}
@@ -634,7 +682,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
               deleteMode && styles.disabledButton,
             ]}
             onPress={openMemoModal}
-            disabled={deleteMode}
+            disabled={deleteMode} // 삭제 모드일 때 비활성화
           >
             <Image
               source={require('../../assets/images/memo.png')}
@@ -650,7 +698,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
               deleteMode && styles.disabledButton,
             ]}
             onPress={toggleDeleteMode}
-            disabled={deleteMode}
+            disabled={deleteMode} // 삭제 모드일 때 비활성화
           >
             <Image
               source={require('../../assets/images/close.png')}
@@ -660,6 +708,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
+        {/* 하단 여백 추가 */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
@@ -686,7 +735,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
       <ScheduleAddModal
         visible={scheduleAddModalVisible}
         onClose={closeScheduleAddModal}
-        onSave={handleSaveSchedule}
+        onSave={handleSaveSchedule} // 일정 저장 함수 연결
       />
     </SafeAreaView>
   );
@@ -783,47 +832,47 @@ const styles = StyleSheet.create({
   noScheduleText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#707070',
+    color: '#707070', // 짙은 회색으로 설정
     textAlign: 'center',
     marginTop: 15,
     marginBottom: 15,
   },
   medicineItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingVertical: 10,
+    flexDirection: 'row', // 가로로 배치
+    alignItems: 'center', // 텍스트와 원을 세로로 가운데 정렬
+    justifyContent: 'space-between', // 텍스트와 원을 양 끝에 배치
+    marginBottom: 10, // 항목 간 간격
+    paddingVertical: 10, // 상하 간격을 조금 키움
   },
   scheduleItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingVertical: 10,
+    flexDirection: 'row', // 가로로 배치
+    alignItems: 'center', // 텍스트와 원을 세로로 가운데 정렬
+    justifyContent: 'space-between', // 텍스트와 원을 양 끝에 배치
+    marginBottom: 10, // 항목 간 간격
+    paddingVertical: 10, // 상하 간격을 조금 키움
   },
   medicineText: {
-    fontSize: 25,
+    fontSize: 25, // 텍스트 크기 키움
     fontWeight: 'bold',
-    flexWrap: 'wrap',
-    flexShrink: 1,
-    width: '100%',
+    flexWrap: 'wrap', // 줄바꿈 허용
+    flexShrink: 1, // 텍스트가 줄어들면서 줄바꿈
+    width: '100%', // 부모 컨테이너에 맞게 너비 설정
   },
   scheduleText: {
-    fontSize: 25,
+    fontSize: 25, // 텍스트 크기 키움
     fontWeight: 'bold',
-    flexWrap: 'wrap',
-    flexShrink: 1,
-    width: '100%',
+    flexWrap: 'wrap', // 줄바꿈 허용
+    flexShrink: 1, // 텍스트가 줄어들면서 줄바꿈
+    width: '100%', // 부모 컨테이너에 맞게 너비 설정
   },
   checkedText: {
-    textDecorationLine: 'line-through',
-    color: 'gray',
+    textDecorationLine: 'line-through', // 체크된 항목에 가운데 선 추가
+    color: 'gray', // 선택된 항목에 대한 색상 변경
   },
   checkBoxContainer: {
     padding: 0,
     margin: 0,
-    marginRight: 10,
+    marginRight: 10, // 체크박스 여백 추가
   },
   circleButton: {
     width: 35,
@@ -839,7 +888,7 @@ const styles = StyleSheet.create({
     borderColor: '#FF0000',
   },
   circleFill: {
-    width: 25,
+    width: 25, // 내부 원 크기
     height: 25,
     borderRadius: 12.5,
     backgroundColor: '#FF0000',
@@ -873,7 +922,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6F6F',
   },
   cancelButton: {
-    backgroundColor: '#f8d7da',
+    backgroundColor: '#f8d7da', // 취소 버튼 색상 설정
   },
   actionButtonText: {
     color: 'black',
@@ -892,7 +941,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   disabledButton: {
-    opacity: 0.5,
+    opacity: 0.5, // 비활성화 시 투명도 낮춤
   },
   icon: {
     width: 70,
@@ -900,7 +949,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   bottomSpacer: {
-    height: 50,
+    height: 50, // 스크롤 시 하단에 추가 여백
   },
 });
 

@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   weatherIcon: {
     width: 130,
     height: 130,
-    marginBottom: 12,
+    marginBottom: 5,
   },
   dateText: {
     fontSize: 29,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   preparednessMessage: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: 'bold',
     color: 'green',
   },

@@ -24,7 +24,6 @@ type Notification = {
 interface DayData {
   date: string;
   isToday: boolean;
-  medicines: Task[];
   schedules: Task[];
 }
 
