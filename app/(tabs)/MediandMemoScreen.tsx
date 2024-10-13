@@ -41,21 +41,23 @@ const MemoScreen: React.FC = () => {
 
   useEffect(() => {
     const loadMemos = async () => {
-      const today = new Date().toISOString().split('T')[0]; // 오늘의 날짜 (YYYY-MM-DD 형식)
+      const today = new Date().toISOString().split('T')[0]; // 오늘 날짜
       try {
         const savedMemos = await AsyncStorage.getItem(`memo_${today}`);
-        console.log('불러온 메모 데이터:', savedMemos); // 로그 추가
-        if (savedMemos) {
-          let parsedMemos = JSON.parse(savedMemos);
-          setMemos(parsedMemos);  // 상태 설정 추가
+        console.log('불러온 메모 데이터:', savedMemos);
+        
+        if (savedMemos !== null) {  // null이 아닌지 확실히 확인
+          const parsedMemos = JSON.parse(savedMemos);
+          setMemos(parsedMemos);  // 저장된 데이터로 상태 업데이트
         } else {
-          setMemos([]); // 저장된 메모가 없을 경우 빈 배열로 설정
-          console.log('저장된 메모가 없습니다.'); // 로그 추가
+          setMemos([]);  // 저장된 데이터가 없을 경우 빈 배열 설정
+          console.log('저장된 메모가 없습니다.');
         }
       } catch (error) {
         console.error('메모 불러오기를 실패하였습니다.', error);
       }
     };
+    
  
     loadMemos();
   }, []);
@@ -85,22 +87,22 @@ const MemoScreen: React.FC = () => {
             <Image source={require('../../assets/images/memo.png')} style={styles.icon} />
           </View>
           {memos.length === 0 ? (
-            <Text style={styles.noDataText}>메모가 없습니다.</Text>
-          ) : (
-            memos.slice(0, 3).map((memo, index) => (
-              <TouchableOpacity key={memo.id !== undefined ? memo.id.toString() : index.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
-                <CheckBox
-                  value={memo.isChecked}
-                  onValueChange={() => toggleMemoChecked(memo.id)}
-                  color={memo.color}
-                  style={styles.checkbox}
-                />
-                <Text style={[styles.cardText, memo.isChecked && styles.strikeThrough]}>
-                  {memo.memo}
-                </Text>
-              </TouchableOpacity>
-            ))
-          )}
+  <Text style={styles.noDataText}>메모가 없습니다.</Text>
+) : (
+  memos.slice(0, 3).map((memo, index) => (
+    <TouchableOpacity key={memo.id ? memo.id.toString() : `memo_${index}`} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
+      <CheckBox
+        value={memo.isChecked}
+        onValueChange={() => toggleMemoChecked(memo.id)}
+        color={memo.color}
+        style={styles.checkbox}
+      />
+      <Text style={[styles.cardText, memo.isChecked && styles.strikeThrough]}>
+        {memo.memo}
+      </Text>
+    </TouchableOpacity>
+  ))
+)}
           {memos.length > 3 && (
             <TouchableOpacity onPress={openModal}>
               <Text style={styles.moreText}>+ 더 보기</Text>

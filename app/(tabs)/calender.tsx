@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -45,13 +45,11 @@ interface Schedule {
   label: string;
   checked: boolean;
 }
-
 interface Memo {
   id: number;
   memo: string;
   isChecked: boolean;
 }
-
 interface DayData {
   date: string;
   isToday: boolean;
@@ -89,22 +87,27 @@ const ScheduleAndMedicineScreen: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false); // 녹음 상태 관리
   const [todayMemo, setTodayMemo] = useState<Memo[]>([]); // 오늘 날짜의 메모 상태
 
+   // 오늘 날짜의 인덱스를 찾음
+   const todayIndex = dateData.findIndex((day) => day.isToday);
+
+// useLayoutEffect에서 강제로 스크롤하도록 설정
+useLayoutEffect(() => {
+  if (todayIndex !== -1) {
+    console.log('오늘 날짜 인덱스:', todayIndex);
+    scrollToTodayMedicine();  // 금일 복용약으로 스크롤
+    scrollToTodaySchedule();  // 오늘의 일정으로 스크롤
+  }
+}, [todayIndex, dateData]);  // dateData가 업데이트될 때마다 실행
+
   // 오늘의 메모를 불러오는 함수
   const loadTodayMemo = async () => {
     try {
-      // 저장된 데이터 가져오기
       const storedData = await AsyncStorage.getItem('scheduleMedicineData');
       if (storedData) {
         const parsedData = JSON.parse(storedData);
-        
-        // 오늘 날짜를 형식에 맞게 포맷팅
-        const todayFormatted = getFormattedDate(new Date());
-
-        // 저장된 데이터에서 오늘 날짜에 해당하는 데이터를 찾고, 메모를 추출
+        const todayFormatted = getFormattedDate(new Date());  // YYYY-MM-DD 형식으로 날짜 포맷팅
         const todayData = parsedData.find((day: DayData) => day.date === todayFormatted);
-        const memosForToday = todayData?.memos || []; // 메모가 없을 경우 빈 배열로 대체
-
-        // 오늘 날짜의 메모 상태를 업데이트
+        const memosForToday = todayData?.memos || [];
         setTodayMemo(memosForToday);
       }
     } catch (error) {
@@ -114,7 +117,13 @@ const ScheduleAndMedicineScreen: React.FC = () => {
 
   // 컴포넌트가 로드되면 오늘의 메모를 불러오는 useEffect
   useEffect(() => {
-    console.log('Generated Date Data:', generateDateData(today, 50));
+    const generatedData = generateDateData(today, 50);
+    console.log('Generated Date Data:', generatedData);  // 생성된 날짜 데이터 확인
+    setDateData(generatedData);  // 생성된 데이터를 상태에 저장
+  
+    const todayIndex = generatedData.findIndex((day) => day.isToday);
+    console.log('Today Index:', todayIndex);  // todayIndex 값 확인
+  
     initializeDataIfEmpty();
     loadTodayMemo();        // 오늘의 메모 로드
   }, []);
@@ -124,61 +133,73 @@ const ScheduleAndMedicineScreen: React.FC = () => {
       const storedData = await AsyncStorage.getItem('scheduleMedicineData');
       if (storedData) {
         const parsedData = JSON.parse(storedData);
-        if (parsedData.length === 0) {
-          console.log('Empty data, initializing default data');
-          const initialData = generateDateData(new Date(), 50);
-          setDateData(initialData);
-          await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(initialData));
-        } else {
-          console.log('Loaded data from storage:', parsedData);  // 데이터 확인
-          setDateData(parsedData); // 저장된 데이터가 있으면 로드
-        }
+        console.log('불러온 데이터:', parsedData);  // 불러온 데이터 로그 출력
+
+        const todayFormatted = getFormattedDate(new Date()); // 오늘 날짜 포맷팅
+        const updatedData = parsedData.map((day: DayData) => {
+          if (day.date === todayFormatted) {
+            return { ...day, isToday: true }; // 오늘 날짜 항목에 isToday 설정
+          }
+          return { ...day, isToday: false }; // 다른 날짜는 isToday를 false로 설정
+        });
+        setDateData(updatedData); // 업데이트된 데이터 설정
+        console.log('Data loaded and updated from AsyncStorage:', updatedData);
       } else {
-        // 저장된 데이터가 없을 경우 기본 데이터로 초기화
-        const initialData = generateDateData(new Date(), 50);
-        setDateData(initialData);
-        await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(initialData));
-        console.log('Initialized and saved default data');
+        console.log('No data found');
       }
     } catch (error) {
       console.error("Error loading data from AsyncStorage:", error);
     }
   };
-  
-  const initializeDataIfEmpty = async () => {
+
+const initializeDataIfEmpty = async () => {
     try {
-      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
-      if (!storedData) {
-        // 저장된 데이터가 없을 경우 기본 데이터 생성 및 저장
-        const initialData = generateDateData(new Date(), 50);
-        await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(initialData));
-        setDateData(initialData);
-        console.log('Initialized and saved default data');
-      } else {
-        await loadDataFromStorage();  // 저장된 데이터가 있으면 기존 로드 로직 호출
-      }
+        const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+        if (!storedData) {
+            const initialData = generateDateData(new Date(), 50);
+            await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(initialData));
+            setDateData(initialData);
+            console.log('Initialized and saved default data:', initialData);
+        } else {
+            await loadDataFromStorage();
+        }
     } catch (error) {
-      console.error('Error initializing data:', error);
+        console.error('Error initializing data:', error);
     }
-  };
+};
   
-
   // 날짜 데이터 생성 함수
-  function generateDateData(baseDate: Date, numDays: number): DayData[] {
-    const dateData: DayData[] = [];
-    for (let i = -numDays; i <= numDays; i++) {
-      const date = getFormattedDate(getDateOffset(baseDate, i));
-      dateData.push({
-        date,
-        isToday: i === 0, // 오늘 날짜인지 여부
-        medicines: [],
-        schedules: [],
-        memos: []
-      });
-    }
-    return dateData;
+function generateDateData(baseDate: Date, numDays: number): DayData[] {
+  const dateData: DayData[] = [];
+  
+  // 오늘 날짜를 00:00:00으로 설정하여 시간 정보를 제거
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);  // 시간을 0으로 설정하여 날짜만 비교 가능하도록
+  
+  for (let i = -numDays; i <= numDays; i++) {
+    const currentDate = getDateOffset(baseDate, i);
+    
+    // 현재 날짜도 00:00:00으로 설정하여 시간 제거
+    currentDate.setHours(0, 0, 0, 0);
+    
+    const isToday = today.getTime() === currentDate.getTime();  // 날짜만 비교
+    const date = getFormattedDate(currentDate);
+    
+    // 날짜와 오늘인지 여부를 로그로 출력하여 확인
+    console.log(`날짜: ${date}, 오늘인지 여부: ${isToday}`);
+    
+    dateData.push({
+      date,
+      isToday, // 오늘 날짜인지 여부 설정
+      medicines: [],
+      schedules: [],
+      memos: [],
+    });
   }
-
+  
+  return dateData;
+}
+  
   // 기존 녹음 중지 및 정리
   const stopExistingRecording = async () => {
     if (recording) {
@@ -252,17 +273,16 @@ const ScheduleAndMedicineScreen: React.FC = () => {
     setDateData(newData);
   };
 
-
   // 오늘 날짜로 스크롤 함수
   const scrollToTodayMedicine = () => {
-    if (dateData.length > 0 && medicineFlatListRef.current) {
-      medicineFlatListRef.current.scrollToIndex({ index: 50, animated: true });
+    if (todayIndex !== -1 && medicineFlatListRef.current) {
+      medicineFlatListRef.current.scrollToIndex({ index: todayIndex, animated: true });
     }
   };
 
   const scrollToTodaySchedule = () => {
-    if (dateData.length > 0 && scheduleFlatListRef.current) {
-      scheduleFlatListRef.current.scrollToIndex({ index: 50, animated: true });
+    if (todayIndex !== -1 && scheduleFlatListRef.current) {
+      scheduleFlatListRef.current.scrollToIndex({ index: todayIndex, animated: true });
     }
   };
 
@@ -477,6 +497,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
               />
             </View>
           </TouchableOpacity>
+
           <FlatList
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -484,7 +505,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             ref={medicineFlatListRef}
             keyExtractor={(item) => item.date}
             contentContainerStyle={styles.scrollViewContent}
-            initialScrollIndex={50}
+            initialScrollIndex={todayIndex >= 0 ? todayIndex : 0} 
             getItemLayout={(data, index) => ({
               length: width * 0.6,
               offset: (width * 0.6 + 16) * index,
@@ -495,7 +516,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
                 <View
                   style={[
                     styles.medicineCard,
-                    item.isToday && styles.medicineCardToday,
+                    item.isToday && styles.medicineCardToday,  // isToday 값에 따라 테두리 적용 (정확한 날짜 비교)
                   ]}
                 >
                   <Text style={styles.dayHeader}>{item.date}</Text>
@@ -577,7 +598,7 @@ const ScheduleAndMedicineScreen: React.FC = () => {
             ref={scheduleFlatListRef}
             keyExtractor={(item) => item.date}
             contentContainerStyle={styles.scrollViewContent}
-            initialScrollIndex={50}
+            initialScrollIndex={todayIndex >= 0 ? todayIndex : 0}
             getItemLayout={(data, index) => ({
               length: width * 0.6,
               offset: (width * 0.6 + 16) * index,

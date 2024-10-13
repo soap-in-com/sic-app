@@ -83,7 +83,7 @@ const WeatherComponent: React.FC = () => {
     if (temp >= 33) return { message: '날씨가 너무 더우니 외출을 자제해주세요!', icon: require('../../assets/images/temperature.png') };
     if (condition === 'Rain') return { message: '비가 오고 있으니 우산을 준비해주세요!', icon: require('../../assets/images/umbrella.png') };
     if (condition === 'Snow' || temp < 0) return { message: '날씨가 너무 추우니 옷을 따뜻하게 입어주세요!', icon: require('../../assets/images/muffler.png') };
-    if (pm10 > 80) return { message: '미세먼지 농도가 좋지 않으니 마스크를 착용해주세요!', icon: require('../../assets/images/mask.png') };
+    if (pm10 > 80) return { message: '미세먼지 농도가 나쁘니 마스크를 착용해주세요!', icon: require('../../assets/images/mask.png') };
     return { message: '', icon: null };
   };
 
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   weatherIcon: {
     width: 130,
     height: 130,
-    marginBottom: 5,
+    marginBottom: 3,
   },
   dateText: {
     fontSize: 29,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   preparednessMessage: {
-    fontSize: 21,
+    fontSize: 18,
     fontWeight: 'bold',
     color: 'green',
   },
