@@ -93,41 +93,65 @@ const ScheduleAndMedicineScreen: React.FC = () => {
 // useLayoutEffect에서 강제로 스크롤하도록 설정
 useLayoutEffect(() => {
   if (todayIndex !== -1) {
-    console.log('오늘 날짜 인덱스:', todayIndex);
     scrollToTodayMedicine();  // 금일 복용약으로 스크롤
     scrollToTodaySchedule();  // 오늘의 일정으로 스크롤
   }
 }, [todayIndex, dateData]);  // dateData가 업데이트될 때마다 실행
 
-  // 오늘의 메모를 불러오는 함수
-  const loadTodayMemo = async () => {
-    try {
-      const storedData = await AsyncStorage.getItem('scheduleMedicineData');
-      if (storedData) {
-        const parsedData = JSON.parse(storedData);
-        const todayFormatted = getFormattedDate(new Date());  // YYYY-MM-DD 형식으로 날짜 포맷팅
-        const todayData = parsedData.find((day: DayData) => day.date === todayFormatted);
-        const memosForToday = todayData?.memos || [];
-        setTodayMemo(memosForToday);
+const checkStoredData = async () => {
+  try {
+      const data = await AsyncStorage.getItem('scheduleMedicineData');
+      if (data) {
+          const parsedData = JSON.parse(data);
+          console.log('Stored data after memo save:', parsedData);
+      } else {
+          console.log('No data found in AsyncStorage.');
       }
-    } catch (error) {
-      console.error("Error loading memo data:", error);
+  } catch (error) {
+      console.error('Error retrieving stored data:', error);
+  }
+};
+
+// 오늘의 메모를 불러오는 함수
+const loadTodayMemo = async () => {
+  try {
+    const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      const todayFormatted = getFormattedDate(new Date());  // 오늘 날짜 포맷팅
+      const todayData = parsedData.find((day: DayData) => day.date === todayFormatted);
+
+      if (todayData && todayData.memos) {
+        setTodayMemo(todayData.memos);
+        console.log('불러온 오늘의 메모:', todayData.memos);
+      } else {
+        console.log('오늘의 메모 데이터가 없습니다.');
+      }
     }
-  };
+  } catch (error) {
+    console.error("Error loading memo data:", error);
+  }
+};
+
 
   // 컴포넌트가 로드되면 오늘의 메모를 불러오는 useEffect
   useEffect(() => {
-    const generatedData = generateDateData(today, 50);
-    console.log('Generated Date Data:', generatedData);  // 생성된 날짜 데이터 확인
-    setDateData(generatedData);  // 생성된 데이터를 상태에 저장
+    const initializeApp = async () => {
+      const generatedData = generateDateData(today, 50);
+      console.log('Generated Date Data:', generatedData);  // 생성된 날짜 데이터 확인
+      setDateData(generatedData);  // 생성된 데이터를 상태에 저장
   
-    const todayIndex = generatedData.findIndex((day) => day.isToday);
-    console.log('Today Index:', todayIndex);  // todayIndex 값 확인
+      const todayIndex = generatedData.findIndex((day) => day.isToday);
+      console.log('Today Index:', todayIndex);  // todayIndex 값 확인
   
-    initializeDataIfEmpty();
-    loadTodayMemo();        // 오늘의 메모 로드
+      // 데이터 초기화 후 메모를 불러오는 순서 보장
+      await initializeDataIfEmpty();
+      await loadTodayMemo();        // 오늘의 메모 로드
+    };
+    
+    initializeApp();
   }, []);
-
+  
   const loadDataFromStorage = async () => {
     try {
       const storedData = await AsyncStorage.getItem('scheduleMedicineData');
@@ -184,9 +208,6 @@ function generateDateData(baseDate: Date, numDays: number): DayData[] {
     
     const isToday = today.getTime() === currentDate.getTime();  // 날짜만 비교
     const date = getFormattedDate(currentDate);
-    
-    // 날짜와 오늘인지 여부를 로그로 출력하여 확인
-    console.log(`날짜: ${date}, 오늘인지 여부: ${isToday}`);
     
     dateData.push({
       date,
@@ -369,22 +390,34 @@ function generateDateData(baseDate: Date, numDays: number): DayData[] {
     const targetIndex = newData.findIndex((day) => day.date === formattedDate);
   
     if (targetIndex !== -1) {
-     // memos 배열이 존재하지 않으면 빈 배열로 초기화
-    if (!newData[targetIndex].memos) {
-      newData[targetIndex].memos = [];
-    }
-
-     // 새 메모 추가
-     newData[targetIndex].memos.push(memoData);
-     setDateData(newData);
+      // memos 배열이 존재하지 않으면 빈 배열로 초기화
+      if (!newData[targetIndex].memos) {
+        newData[targetIndex].memos = [];
+      }
+  
+      // 새 메모 추가
+      const newMemo = {
+        id: newData[targetIndex].memos.length + 1,
+        memo: memoData.memo,
+        isChecked: memoData.isChecked,
+      };
+      newData[targetIndex].memos.push(newMemo);
+      setDateData(newData);
   
       try {
         await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(newData));
+        console.log("Memo saved successfully:", newData);
+  
+        const savedData = await AsyncStorage.getItem('scheduleMedicineData');
+        if (savedData) {
+          console.log("Saved Data after saving memo:", JSON.parse(savedData));
+        }
       } catch (error) {
         console.error("Error saving memo data:", error);
       }
     }
   };
+  
 
   // 메모 모달 열기 함수
   const openMemoModal = () => {
@@ -750,15 +783,23 @@ function generateDateData(baseDate: Date, numDays: number): DayData[] {
 
       {/* 메모 모달 */}
       <MemoModal
-        visible={memoModalVisible}
-        onClose={closeMemoModal}
-        onSave={(memo) => {
-          console.log('저장된 메모:', memo);
-          closeMemoModal();
-        }}
-        startRecording={startRecording}
-        stopRecording={stopRecording}
-      />
+    visible={memoModalVisible}
+    onClose={closeMemoModal}
+    onSave={(memoData) => {
+    // 필요한 속성을 포함하도록 memoData를 변환
+      const formattedMemoData = {
+      id: todayMemo.length + 1,  // ID는 고유해야 하므로 길이를 기준으로 생성
+      memo: memoData.content,  // content를 memo로 변환
+      isChecked: false,  // 초기 상태는 체크되지 않음
+    };
+
+    handleSaveMemo(formattedMemoData);  // 메모 저장 함수 호출
+    closeMemoModal();  // 모달 닫기
+  }}
+  startRecording={startRecording}
+  stopRecording={stopRecording}
+/>
+
 
       {/* 일정 추가 모달 */}
       <ScheduleAddModal

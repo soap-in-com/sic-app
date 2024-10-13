@@ -58,7 +58,6 @@ const MemoScreen: React.FC = () => {
       }
     };
     
- 
     loadMemos();
   }, []);
 
