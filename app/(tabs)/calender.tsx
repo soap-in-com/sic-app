@@ -412,23 +412,31 @@ const ScheduleAndMedicineScreen: React.FC = () => {
   };
 
   // 선택된 항목 삭제 함수
-  const deleteSelectedItems = () => {
+  const deleteSelectedItems = async () => {
     const newData = dateData.map((day) => {
       if (!selectedItems[day.date]) return day;
-
+  
       const medicines = day.medicines.filter(
         (medicine) => !selectedItems[day.date].medicines[medicine.label]
       );
       const schedules = day.schedules.filter(
         (schedule) => !selectedItems[day.date].schedules[schedule.label]
       );
-
+  
       return { ...day, medicines, schedules };
     });
-
+  
     setDateData(newData);
     setDeleteMode(false);
     setSelectedItems({});
+  
+    try {
+      // 삭제된 데이터를 AsyncStorage에 저장하여 반영하는 부분
+      await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(newData));
+      console.log('데이터가 성공적으로 삭제되었습니다.');
+    } catch (error) {
+      console.error('데이터 저장 중 오류가 발생했습니다:', error);
+    }
   };
 
   return (

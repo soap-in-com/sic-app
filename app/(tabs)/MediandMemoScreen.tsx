@@ -115,7 +115,7 @@ const MemoScreen: React.FC = () => {
       <ScrollView>
         <Text style={styles.modalTitle}>오늘의 메모</Text>
         {memos.length === 0 ? (
-          <Text style={styles.noDataText}>메모가 없습니다.</Text>
+          <Text style={styles.modalText}>메모가 없습니다.</Text>
         ) : (
           memos.map((memo, index) => (
             <TouchableOpacity key={memo.id !== undefined ? memo.id.toString() : index.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
@@ -240,19 +240,28 @@ const saveTodayMedications = async (updatedMedications: Medication[]) => {
             <Text style={styles.title}>금일 복용약</Text>
             <Image source={require('../../assets/images/pill.png')} style={styles.icon} />
           </View>
-          {medications.slice(0, 3).map((med) => (
-            <TouchableOpacity key={med.id ? med.id.toString() : 'med_${index}'} onPress={() => toggleMedicationChecked(med.id)} style={styles.item}>
-              <CheckBox
-                value={med.isChecked}
-                onValueChange={() => toggleMedicationChecked(med.id)}
-                color="#FFA500"
-                style={styles.checkbox}
-              />
-              <Text style={[styles.cardText, med.isChecked && styles.strikeThrough]}>
-                {med.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {medications.length === 0 ? (
+  <Text style={styles.noDataText}>복용약이 없습니다.</Text>
+) : (
+  medications.slice(0, 3).map((med) => (
+    <TouchableOpacity key={med.id ? med.id.toString() : 'med_${index}'} onPress={() => toggleMedicationChecked(med.id)} style={styles.item}>
+      <CheckBox
+        value={med.isChecked}
+        onValueChange={() => toggleMedicationChecked(med.id)}
+        color="#FFA500"
+        style={styles.checkbox}
+      />
+      <Text style={[styles.cardText, med.isChecked && styles.strikeThrough]}>
+        {med.label}
+      </Text>
+    </TouchableOpacity>
+  ))
+)}
+{medications.length > 3 && (
+  <TouchableOpacity onPress={openModal}>
+    <Text style={styles.moreText}>+ 더 보기</Text>
+  </TouchableOpacity>
+)}
           {medications.length > 3 && (
             <TouchableOpacity onPress={openModal}>
               <Text style={styles.moreText}>+ 더 보기</Text>
@@ -266,7 +275,10 @@ const saveTodayMedications = async (updatedMedications: Medication[]) => {
           <View style={styles.modalContent}>
             <ScrollView>
               <Text style={styles.modalTitle}>금일 복용약</Text>
-              {medications.map((med, index) => (
+              {medications.length === 0 ? (
+          <Text style={styles.modalText}>복용약이 없습니다.</Text> // <- 모달 안에 표시되는 '복용약이 없습니다'
+        ) : (
+              medications.map((med, index) => (
                 <TouchableOpacity key={med?.id ? med.id.toString() : `med_${index}`} onPress={() => toggleMedicationChecked(med.id)} style={styles.item}>
                   <CheckBox
                     value={med.isChecked}
@@ -278,7 +290,7 @@ const saveTodayMedications = async (updatedMedications: Medication[]) => {
                     {med.label}
                   </Text>
                 </TouchableOpacity>
-              ))}
+              )))}
             </ScrollView>
             <TouchableOpacity onPress={closeModal} style={[styles.closeButton, { backgroundColor: '#FFA500' }]}>
               <Text style={styles.closeButtonText}>닫기</Text>
@@ -325,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
     minHeight: 215,
-    width: (width * 0.48) - 15,
+    width: (width * 0.48) - 17,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -409,6 +421,7 @@ const styles = StyleSheet.create({
   modalText: {
     marginLeft: 10,
     fontSize: 28,
+    textAlign: 'center',
   },
   closeButton: {
     borderRadius: 12,
