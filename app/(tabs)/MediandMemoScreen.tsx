@@ -78,25 +78,29 @@ const MemoScreen: React.FC = () => {
 
   return (
     <>
-      <TouchableOpacity onPress={openModal}>
+       <TouchableOpacity onPress={openModal}>
         <View style={[styles.card, styles.memoCard]}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>오늘의 메모</Text>
             <Image source={require('../../assets/images/memo.png')} style={styles.icon} />
           </View>
-          {memos.slice(0, 3).map((memo, index) => (
-            <TouchableOpacity key={memo.id !== undefined ? memo.id.toString() : index.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
-              <CheckBox
-                value={memo.isChecked}
-                onValueChange={() => toggleMemoChecked(memo.id)}
-                color={memo.color}
-                style={styles.checkbox}
-              />
-              <Text style={[styles.cardText, memo.isChecked && styles.strikeThrough]}>
-                {memo.memo}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {memos.length === 0 ? (
+            <Text style={styles.noDataText}>메모가 없습니다.</Text>
+          ) : (
+            memos.slice(0, 3).map((memo, index) => (
+              <TouchableOpacity key={memo.id !== undefined ? memo.id.toString() : index.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
+                <CheckBox
+                  value={memo.isChecked}
+                  onValueChange={() => toggleMemoChecked(memo.id)}
+                  color={memo.color}
+                  style={styles.checkbox}
+                />
+                <Text style={[styles.cardText, memo.isChecked && styles.strikeThrough]}>
+                  {memo.memo}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
           {memos.length > 3 && (
             <TouchableOpacity onPress={openModal}>
               <Text style={styles.moreText}>+ 더 보기</Text>
@@ -106,30 +110,34 @@ const MemoScreen: React.FC = () => {
       </TouchableOpacity>
 
       <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={closeModal}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ScrollView>
-              <Text style={styles.modalTitle}>오늘의 메모</Text>
-              {memos.map((memo, index) => (
-                <TouchableOpacity key={memo.id!== undefined ? memo.id.toString() : index.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
-                  <CheckBox
-                    value={memo.isChecked}
-                    onValueChange={() => toggleMemoChecked(memo.id)}
-                    color={memo.color}
-                    style={styles.checkbox}
-                  />
-                  <Text style={[styles.modalText, memo.isChecked && styles.strikeThrough, { flexWrap: 'wrap', flexShrink: 1 }]}>
-                    {memo.memo}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity onPress={closeModal} style={[styles.closeButton, { backgroundColor: '#FFD700' }]}>
-              <Text style={styles.closeButtonText}>닫기</Text>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      <ScrollView>
+        <Text style={styles.modalTitle}>오늘의 메모</Text>
+        {memos.length === 0 ? (
+          <Text style={styles.noDataText}>메모가 없습니다.</Text>
+        ) : (
+          memos.map((memo, index) => (
+            <TouchableOpacity key={memo.id !== undefined ? memo.id.toString() : index.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
+              <CheckBox
+                value={memo.isChecked}
+                onValueChange={() => toggleMemoChecked(memo.id)}
+                color={memo.color}
+                style={styles.checkbox}
+              />
+              <Text style={[styles.modalText, memo.isChecked && styles.strikeThrough, { flexWrap: 'wrap', flexShrink: 1 }]}>
+                {memo.memo}
+              </Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+          ))
+        )}
+      </ScrollView>
+      <TouchableOpacity onPress={closeModal} style={[styles.closeButton, { backgroundColor: '#FFD700' }]}>
+        <Text style={styles.closeButtonText}>닫기</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
     </>
   );
 };
@@ -365,7 +373,7 @@ const styles = StyleSheet.create({
   },
   moreText: {
     marginTop: 10,
-    fontSize: 18,
+    fontSize: 22,
     textAlign: 'center',
     fontWeight: 'bold',
     color: '#007AFF',
