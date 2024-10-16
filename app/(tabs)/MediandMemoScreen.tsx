@@ -5,6 +5,15 @@ import { Dimensions, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, T
 
 const { width } = Dimensions.get('window');
 
+// 날짜 포맷 함수 추가
+const getFormattedDate = (date: Date): string => {
+  const days = ['일', '월', '화', '수', '목', '금', '토']; // 요일 배열
+  const month = date.getMonth() + 1; // 월 (0부터 시작하므로 +1 필요)
+  const day = date.getDate(); // 일
+  const dayOfWeek = days[date.getDay()]; // 요일
+  return `${month}월 ${day}일(${dayOfWeek})`; // 'M월 D일(요일)' 형식으로 반환
+};
+
 interface Medication {
   id: number;
   label: string;
@@ -28,44 +37,60 @@ const MemoScreen: React.FC = () => {
   const [memos, setMemos] = useState<Memo[]>([]); // 초기 메모 배열을 빈 배열로 수정
   const [modalVisible, setModalVisible] = useState(false);
 
-  // 메모 저장 함수
-  const saveMemos = async (newMemos: Memo[]) => {
-    const today = new Date().toISOString().split('T')[0];  // 오늘의 날짜 (YYYY-MM-DD)
-    try {
-      await AsyncStorage.setItem(`memo_${today}`, JSON.stringify(newMemos));  // 메모 저장
-      console.log('메모가 저장되었습니다:', newMemos);
-    } catch (error) {
-      console.error('메모 저장 중 오류 발생:', error);
-    }
-  };
+// 메모 저장 함수
+const saveMemos = async (newMemos: Memo[]) => {
+  const todayFormatted = getFormattedDate(new Date());  // 수정된 부분: 기존 날짜 형식 사용
+  try {
+    const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+    let parsedData = storedData ? JSON.parse(storedData) : [];
 
-  useEffect(() => {
-    const loadMemos = async () => {
-      const today = new Date().toISOString().split('T')[0]; // 오늘 날짜
+    // 오늘 날짜 데이터 찾기
+    const todayDataIndex = parsedData.findIndex((day: DayData) => day.date === todayFormatted);
+    if (todayDataIndex !== -1) {
+      parsedData[todayDataIndex].memos = newMemos;
+    } else {
+      parsedData.push({ date: todayFormatted, isToday: true, medicines: [], memos: newMemos });
+    }
+
+    await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(parsedData));
+    console.log('메모가 저장되었습니다:', newMemos);
+
+  } catch (error) {
+    console.error('메모 저장 중 오류 발생:', error);
+  }
+};
+
+// 메모 불러오기 함수 (scheduleMedicineData에서 불러오기)
+useEffect(() => {
+  const loadMemos = async () => {
+      const todayFormatted = getFormattedDate(new Date());  // 기존 날짜 형식 사용
       try {
-        const savedMemos = await AsyncStorage.getItem(`memo_${today}`);
-        console.log('불러온 메모 데이터:', savedMemos);
-        
-        if (savedMemos !== null) {  // null이 아닌지 확실히 확인
-          const parsedMemos = JSON.parse(savedMemos);
-          setMemos(parsedMemos);  // 저장된 데이터로 상태 업데이트
-        } else {
-          setMemos([]);  // 저장된 데이터가 없을 경우 빈 배열 설정
-          console.log('저장된 메모가 없습니다.');
+        const storedData = await AsyncStorage.getItem('scheduleMedicineData');
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          const todayData = parsedData.find((day: DayData) => day.date === todayFormatted);
+          if (todayData && todayData.memos) {
+            setMemos(todayData.memos);
+            console.log('불러온 메모 데이터:', todayData.memos);
+          } else {
+            setMemos([]);  // 데이터가 없을 경우 빈 배열로 설정
+            console.log('저장된 메모가 없습니다.');
+          }
         }
       } catch (error) {
         console.error('메모 불러오기를 실패하였습니다.', error);
       }
     };
-    
-    loadMemos();
-  }, []);
+
+  loadMemos();
+}, []);
 
   const toggleMemoChecked = (id: number) => {
     const updatedMemos = memos.map((memo) =>
       memo.id === id ? { ...memo, isChecked: !memo.isChecked } : memo
     );
     setMemos(updatedMemos);
+    console.log('업데이트된 메모 상태:', updatedMemos);  // 상태 업데이트 후 로그 추가
     saveMemos(updatedMemos);  // 메모 상태가 변경되면 저장
   };
 
@@ -89,11 +114,11 @@ const MemoScreen: React.FC = () => {
   <Text style={styles.noDataText}>메모가 없습니다.</Text>
 ) : (
   memos.slice(0, 3).map((memo, index) => (
-    <TouchableOpacity key={memo.id ? memo.id.toString() : `memo_${index}`} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
+    <TouchableOpacity key={memo.id !== undefined ? memo.id.toString() : index.toString()} onPress={() => toggleMemoChecked(memo.id)} style={styles.item}>
       <CheckBox
         value={memo.isChecked}
         onValueChange={() => toggleMemoChecked(memo.id)}
-        color={memo.color}
+        color="#FFD700" 
         style={styles.checkbox}
       />
       <Text style={[styles.cardText, memo.isChecked && styles.strikeThrough]}>
@@ -123,7 +148,7 @@ const MemoScreen: React.FC = () => {
               <CheckBox
                 value={memo.isChecked}
                 onValueChange={() => toggleMemoChecked(memo.id)}
-                color={memo.color}
+                color="#FFD700"
                 style={styles.checkbox}
               />
               <Text style={[styles.modalText, memo.isChecked && styles.strikeThrough, { flexWrap: 'wrap', flexShrink: 1 }]}>
@@ -160,31 +185,28 @@ const MedicationsScreen: React.FC = () => {
   const loadTodayMedications = async () => {
     try {
       const storedData = await AsyncStorage.getItem('scheduleMedicineData');
-      console.log('Stored data:', storedData); // 저장된 데이터를 확인
-      
-      if (storedData !== null) {
-        const parsedData: DayData[] = JSON.parse(storedData);
-        const todayFormattedDate = getFormattedDate(new Date()); // 오늘의 날짜를 맞춰서 형식화
-        console.log('Today\'s formatted date:', todayFormattedDate); // 오늘 날짜를 로그에 출력
-
-        // 오늘의 데이터를 찾아 복용약만 필터링
-        const todayData = parsedData.find((day: DayData) => day.date === todayFormattedDate);
-        console.log('Today Data:', todayData); // 오늘 데이터를 확인
-
-        if (todayData && Array.isArray(todayData.medicines) && todayData.medicines.length > 0) {
-          console.log("오늘의 복용약 데이터:", todayData.medicines);  // 불러온 오늘의 복용약 데이터를 출력
-          setMedications(todayData.medicines);  // 오늘의 복용약을 설정
-        } else {
-          setMedications([]);  // 오늘 복용약이 없을 경우 빈 배열로 설정
-          console.log("오늘 복용약을 불러올 수 없습니다.");
-        }
-      } else {
+      if (!storedData) {
         console.log("저장된 복용약 데이터가 없습니다.");
+        setMedications([]);  // 저장된 데이터가 없으면 빈 배열로 설정
+        return;
+      }
+  
+      const parsedData: DayData[] = JSON.parse(storedData);
+      const todayFormattedDate = getFormattedDate(new Date());
+      const todayData = parsedData.find((day: DayData) => day.date === todayFormattedDate);
+  
+      if (todayData?.medicines && todayData.medicines.length > 0) {
+        setMedications(todayData.medicines);  // 오늘의 복용약 설정
+        console.log("오늘의 복용약 데이터:", todayData.medicines);
+      } else {
+        setMedications([]);  // 복용약이 없으면 빈 배열로 설정
+        console.log("오늘 복용약을 불러올 수 없습니다.");
       }
     } catch (error) {
       console.error('복용약 데이터를 불러오는 중 오류가 발생했습니다:', error);
     }
   };
+  
 
     useEffect(() => {
       loadTodayMedications();

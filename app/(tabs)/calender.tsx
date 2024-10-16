@@ -390,23 +390,24 @@ function generateDateData(baseDate: Date, numDays: number): DayData[] {
     const targetIndex = newData.findIndex((day) => day.date === formattedDate);
   
     if (targetIndex !== -1) {
-      // memos 배열이 존재하지 않으면 빈 배열로 초기화
       if (!newData[targetIndex].memos) {
         newData[targetIndex].memos = [];
       }
   
-      // 새 메모 추가
+      // 기존 메모의 최대 id를 찾아 새로운 id 할당
+      const maxId = newData[targetIndex].memos.reduce((max, memo) => Math.max(max, memo.id), 0);
       const newMemo = {
-        id: newData[targetIndex].memos.length + 1,
+        id: maxId + 1, // 기존 ID와 겹치지 않도록 새로운 ID 생성
         memo: memoData.memo,
         isChecked: memoData.isChecked,
       };
+  
       newData[targetIndex].memos.push(newMemo);
       setDateData(newData);
   
       try {
         await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(newData));
-        console.log("Memo saved successfully:", newData);
+        console.log("Memo saved successfully:", JSON.stringify(newData, null, 2)); // 메모 저장 성공 시 출력
   
         const savedData = await AsyncStorage.getItem('scheduleMedicineData');
         if (savedData) {
@@ -418,7 +419,6 @@ function generateDateData(baseDate: Date, numDays: number): DayData[] {
     }
   };
   
-
   // 메모 모달 열기 함수
   const openMemoModal = () => {
     setMemoModalVisible(true); // 메모 모달 열기
