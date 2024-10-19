@@ -133,7 +133,7 @@ const TasksAndNotificationsScreen: React.FC = () => {
                 </TouchableOpacity>
               ))
             ) : (
-              <Text style={styles.noTasksText}>일정이 없습니다</Text> // 일정이 없는 경우
+              <Text style={styles.noTasksText}>일정이 없습니다.</Text> // 일정이 없는 경우
             )}
             {tasks.length > 3 && (
               <TouchableOpacity onPress={() => openModal('tasks')}>
@@ -181,6 +181,12 @@ const TasksAndNotificationsScreen: React.FC = () => {
               <Text style={styles.modalTitle}>
                 {selectedType === 'notifications' ? '필수 확인사항 (전체)' : '오늘의 일정 (전체)'}
               </Text>
+
+            {/* 일정이 없을 경우 '일정이 없습니다' 표시 */}
+            {selectedType === 'tasks' && tasks.length === 0 && (
+              <Text style={styles.noTasksModalText}>일정이 없습니다.</Text>
+            )}
+
               {(selectedType === 'notifications' ? notifications : tasks).map((item) =>
                 isNotification(item) ? (
                   <TouchableOpacity key={item.id?.toString()} onPress={() => toggleNotificationChecked(item.id)} style={styles.item}>
@@ -245,7 +251,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#f5f5f5', // 회색 배경
     borderRadius: 10,
-    padding: 20,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -265,6 +271,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
+    textAlign: 'center',
   },
   dateText: {
     fontSize: 18, // 카드 크기에 맞춰 텍스트 크기 확대
@@ -290,15 +297,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 10, // 체크박스와 텍스트 사이 여백
   },
+  noTasksModalText: {
+    fontSize: 26, 
+    textAlign: 'center',
+    color: '#000000',
+  },
   strikeThrough: {
     textDecorationLine: 'line-through',
     color: 'gray',
   },
   noTasksText: {
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'center',
     color: '#707070',
-    marginTop: 10,
+    marginTop: 6,
   },
   moreText: {
     marginTop: 10,
