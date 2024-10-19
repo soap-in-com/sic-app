@@ -70,7 +70,6 @@ useEffect(() => {
           const todayData = parsedData.find((day: DayData) => day.date === todayFormatted);
           if (todayData && todayData.memos) {
             setMemos(todayData.memos);
-            console.log('불러온 메모 데이터:', todayData.memos);
           } else {
             setMemos([]);  // 데이터가 없을 경우 빈 배열로 설정
             console.log('저장된 메모가 없습니다.');
@@ -137,7 +136,7 @@ useEffect(() => {
   <View style={styles.modalOverlay}>
     <View style={styles.modalContent}>
       <ScrollView>
-        <Text style={styles.modalTitle}>오늘의 메모</Text>
+        <Text style={styles.modalTitle}>오늘의 메모 (전체)</Text>
         {memos.length === 0 ? (
           <Text style={styles.modalText}>메모가 없습니다.</Text>
         ) : (
@@ -293,7 +292,7 @@ const saveTodayMedications = async (updatedMedications: Medication[]) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ScrollView>
-              <Text style={styles.modalTitle}>금일 복용약</Text>
+              <Text style={styles.modalTitle}>금일 복용약 (전체)</Text>
               {medications.length === 0 ? (
           <Text style={styles.modalText}>복용약이 없습니다.</Text> // <- 모달 안에 표시되는 '복용약이 없습니다'
         ) : (
@@ -355,8 +354,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 10,
     padding: 20,
-    minHeight: 215,
-    width: (width * 0.48) - 17,
+    minHeight: 190,
+    width: (width * 0.48) - 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -404,7 +403,7 @@ const styles = StyleSheet.create({
   },
   moreText: {
     marginTop: 10,
-    fontSize: 22,
+    fontSize: 18,
     textAlign: 'center',
     fontWeight: 'bold',
     color: '#007AFF',

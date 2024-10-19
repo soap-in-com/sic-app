@@ -18,7 +18,6 @@ const API_KEY = '724e4827102510377b55ebc097c13897';
 
 const WeatherComponent: React.FC = () => {
   const [weather, setWeather] = useState<Weather | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const holidays = [
     '2024-01-01', '2024-02-09', '2024-02-10', '2024-02-11', '2024-03-01',
@@ -113,8 +112,6 @@ const WeatherComponent: React.FC = () => {
         });
       } catch (error) {
         Alert.alert('날씨 정보를 불러올 수 없습니다.', '잠시 후 다시 시도해주세요.');
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -123,7 +120,6 @@ const WeatherComponent: React.FC = () => {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           Alert.alert('위치 권한 필요', '앱을 사용하려면 위치 권한이 필요합니다.');
-          setLoading(false);
           return;
         }
 
@@ -139,7 +135,6 @@ const WeatherComponent: React.FC = () => {
         fetchWeatherData(latitude, longitude, formattedLocation);
       } catch (error) {
         Alert.alert('위치 정보를 불러올 수 없습니다.', '위치 정보를 다시 시도해주세요.');
-        setLoading(false);
       }
     };
 
@@ -147,11 +142,7 @@ const WeatherComponent: React.FC = () => {
   }, []);
 
   if (!weather) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <Text>날씨 정보를 불러올 수 없습니다.</Text>
-      </SafeAreaView>
-    );
+    return null;
   }
 
   const preparedness = getPreparednessMessage(weather.temp, weather.condition, weather.pm10);
