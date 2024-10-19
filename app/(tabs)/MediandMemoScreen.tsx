@@ -53,7 +53,6 @@ const saveMemos = async (newMemos: Memo[]) => {
     }
 
     await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(parsedData));
-    console.log('메모가 저장되었습니다:', newMemos);
 
   } catch (error) {
     console.error('메모 저장 중 오류 발생:', error);
@@ -90,7 +89,6 @@ useEffect(() => {
       memo.id === id ? { ...memo, isChecked: !memo.isChecked } : memo
     );
     setMemos(updatedMemos);
-    console.log('업데이트된 메모 상태:', updatedMemos);  // 상태 업데이트 후 로그 추가
     saveMemos(updatedMemos);  // 메모 상태가 변경되면 저장
   };
 
@@ -200,7 +198,6 @@ const MedicationsScreen: React.FC = () => {
         console.log("오늘의 복용약 데이터:", todayData.medicines);
       } else {
         setMedications([]);  // 복용약이 없으면 빈 배열로 설정
-        console.log("오늘 복용약을 불러올 수 없습니다.");
       }
     } catch (error) {
       console.error('복용약 데이터를 불러오는 중 오류가 발생했습니다:', error);
@@ -241,7 +238,6 @@ const saveTodayMedications = async (updatedMedications: Medication[]) => {
 
     // 저장
     await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(parsedData));
-    console.log('복용약 데이터가 저장되었습니다.');
   } catch (error) {
     console.error('복용약 저장 중 오류가 발생했습니다.', error);
   }

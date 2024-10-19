@@ -65,7 +65,6 @@ const TasksAndNotificationsScreen: React.FC = () => {
    const loadTodayTasks = async () => {
     try {
       const storedData = await AsyncStorage.getItem('scheduleMedicineData');
-      console.log('Stored data:', storedData); // 저장된 데이터를 확인
       
       if (storedData !== null) {
         const parsedData: DayData[] = JSON.parse(storedData);
@@ -85,11 +84,8 @@ const TasksAndNotificationsScreen: React.FC = () => {
           setTasks(tasks);  // 오늘의 일정을 설정
         } else {
           setTasks([]);  // 오늘 일정이 없을 경우 빈 배열로 설정
-          console.log("오늘 일정을 불러올 수 없습니다.");
         }
-      } else {
-        console.log("저장된 일정 데이터가 없습니다.");
-      }
+      } 
     } catch (error) {
       console.error('Failed to load tasks', error);
     }

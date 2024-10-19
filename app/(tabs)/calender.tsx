@@ -103,9 +103,8 @@ const checkStoredData = async () => {
       const data = await AsyncStorage.getItem('scheduleMedicineData');
       if (data) {
           const parsedData = JSON.parse(data);
-          console.log('Stored data after memo save:', parsedData);
       } else {
-          console.log('No data found in AsyncStorage.');
+          console.log('No data found in AsyncStorage.')
       }
   } catch (error) {
       console.error('Error retrieving stored data:', error);
@@ -138,11 +137,9 @@ const loadTodayMemo = async () => {
   useEffect(() => {
     const initializeApp = async () => {
       const generatedData = generateDateData(today, 50);
-      console.log('Generated Date Data:', generatedData);  // 생성된 날짜 데이터 확인
       setDateData(generatedData);  // 생성된 데이터를 상태에 저장
   
       const todayIndex = generatedData.findIndex((day) => day.isToday);
-      console.log('Today Index:', todayIndex);  // todayIndex 값 확인
   
       // 데이터 초기화 후 메모를 불러오는 순서 보장
       await initializeDataIfEmpty();
@@ -157,7 +154,6 @@ const loadTodayMemo = async () => {
       const storedData = await AsyncStorage.getItem('scheduleMedicineData');
       if (storedData) {
         const parsedData = JSON.parse(storedData);
-        console.log('불러온 데이터:', parsedData);  // 불러온 데이터 로그 출력
 
         const todayFormatted = getFormattedDate(new Date()); // 오늘 날짜 포맷팅
         const updatedData = parsedData.map((day: DayData) => {
@@ -167,7 +163,6 @@ const loadTodayMemo = async () => {
           return { ...day, isToday: false }; // 다른 날짜는 isToday를 false로 설정
         });
         setDateData(updatedData); // 업데이트된 데이터 설정
-        console.log('Data loaded and updated from AsyncStorage:', updatedData);
       } else {
         console.log('No data found');
       }
@@ -183,7 +178,6 @@ const initializeDataIfEmpty = async () => {
             const initialData = generateDateData(new Date(), 50);
             await AsyncStorage.setItem('scheduleMedicineData', JSON.stringify(initialData));
             setDateData(initialData);
-            console.log('Initialized and saved default data:', initialData);
         } else {
             await loadDataFromStorage();
         }
@@ -411,7 +405,6 @@ function generateDateData(baseDate: Date, numDays: number): DayData[] {
   
         const savedData = await AsyncStorage.getItem('scheduleMedicineData');
         if (savedData) {
-          console.log("Saved Data after saving memo:", JSON.parse(savedData));
         }
       } catch (error) {
         console.error("Error saving memo data:", error);
