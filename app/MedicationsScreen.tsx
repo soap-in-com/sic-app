@@ -64,7 +64,7 @@ const MedicationsScreen: React.FC = () => {
           <View style={styles.titleContainer}>
             <Text style={styles.title}>금일 복용약</Text>
             <Image
-              source={require('../../assets/images/pill.png')}
+              source={require('../assets/images/pill.png')}
               style={styles.icon}
             />
           </View>

@@ -43,7 +43,7 @@ const MemoScreen: React.FC = () => {
           <View style={styles.titleContainer}>
             <Text style={styles.title}>오늘의 메모</Text>
             <Image
-              source={require('../../assets/images/memo.png')}
+              source={require('../assets/images/memo.png')}
               style={styles.icon}
             />
           </View>
