@@ -18,47 +18,47 @@
 // const data = [
 //   {
 //     id: '1',
-//     image: require('../../assets/images/pill.png'),
+//     image: require('../assets/images/pill.png'),
 //     backgroundColor: '#FFE4E1',
 //   },
 //   {
 //     id: '2',
-//     image: require('../../assets/images/weather.png'),
+//     image: require('../assets/images/weather.png'),
 //     backgroundColor: '#FFFFE0',
 //   },
 //   {
 //     id: '3',
-//     image: require('../../assets/images/store.png'),
+//     image: require('../assets/images/store.png'),
 //     backgroundColor: '#E0FFFF',
 //   },
 //   {
 //     id: '4',
-//     image: require('../../assets/images/pill.png'),
+//     image: require('../assets/images/pill.png'),
 //     backgroundColor: '#FFE4E1',
 //   },
 //   {
 //     id: '5',
-//     image: require('../../assets/images/weather.png'),
+//     image: require('../assets/images/weather.png'),
 //     backgroundColor: '#FFFFE0',
 //   },
 //   {
 //     id: '6',
-//     image: require('../../assets/images/store.png'),
+//     image: require('../assets/images/store.png'),
 //     backgroundColor: '#E0FFFF',
 //   },
 //   {
 //     id: '7',
-//     image: require('../../assets/images/pill.png'),
+//     image: require('../assets/images/pill.png'),
 //     backgroundColor: '#FFE4E1',
 //   },
 //   {
 //     id: '8',
-//     image: require('../../assets/images/weather.png'),
+//     image: require('../assets/images/weather.png'),
 //     backgroundColor: '#FFFFE0',
 //   },
 //   {
 //     id: '9',
-//     image: require('../../assets/images/store.png'),
+//     image: require('../assets/images/store.png'),
 //     backgroundColor: '#E0FFFF',
 //   },
 // ];
@@ -127,6 +127,7 @@
 //       const token: KakaoOAuthToken = await login();
 //       console.log('Kakao Login Success:', token);
 //       // 토큰을 사용하여 로그인 후 처리 로직 추가
+//       // 예: navigation.navigate('MainPage');
 //     } catch (error) {
 //       console.error('Kakao Login Failed:', error);
 //     }
@@ -318,9 +319,9 @@
 
 // export default LoginPage;
 
+// LoginPage.tsx
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { KakaoOAuthToken, login } from '@react-native-seoul/kakao-login';
-import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -351,48 +352,12 @@ const data = [
     image: require('../assets/images/store.png'),
     backgroundColor: '#E0FFFF',
   },
-  {
-    id: '4',
-    image: require('../assets/images/pill.png'),
-    backgroundColor: '#FFE4E1',
-  },
-  {
-    id: '5',
-    image: require('../assets/images/weather.png'),
-    backgroundColor: '#FFFFE0',
-  },
-  {
-    id: '6',
-    image: require('../assets/images/store.png'),
-    backgroundColor: '#E0FFFF',
-  },
-  {
-    id: '7',
-    image: require('../assets/images/pill.png'),
-    backgroundColor: '#FFE4E1',
-  },
-  {
-    id: '8',
-    image: require('../assets/images/weather.png'),
-    backgroundColor: '#FFFFE0',
-  },
-  {
-    id: '9',
-    image: require('../assets/images/store.png'),
-    backgroundColor: '#E0FFFF',
-  },
+  // ... 더 많은 데이터 생략
 ];
 
-const LoginPage = () => {
-  const [isModalVisible, setModalVisible] = useState(true);
-  const navigation = useNavigation();
+const LoginPage = ({ onClose }: { onClose: () => void }) => {
   const flatListRef = useRef<FlatList<any> | null>(null);
   const [index, setIndex] = useState(0);
-
-  const closeModal = () => {
-    setModalVisible(false);
-    navigation.goBack();
-  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -446,8 +411,7 @@ const LoginPage = () => {
     try {
       const token: KakaoOAuthToken = await login();
       console.log('Kakao Login Success:', token);
-      // 토큰을 사용하여 로그인 후 처리 로직 추가
-      // 예: navigation.navigate('MainPage');
+      // 로그인 성공 후 처리 로직 추가
     } catch (error) {
       console.error('Kakao Login Failed:', error);
     }
@@ -456,11 +420,11 @@ const LoginPage = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Modal
-        isVisible={isModalVisible}
+        isVisible
         swipeDirection="down"
-        onSwipeComplete={closeModal}
+        onSwipeComplete={onClose}
         style={styles.modal}
-        onBackdropPress={closeModal}
+        onBackdropPress={onClose}
       >
         <View style={styles.modalContent}>
           <View style={styles.handle} />
@@ -470,15 +434,12 @@ const LoginPage = () => {
             renderItem={({ item }) => (
               <View style={styles.box}>
                 <LinearGradient
-                  colors={['#FFFFFF', item.backgroundColor]} // 그라데이션 색상
-                  start={{ x: 0, y: 0 }} // 왼쪽 위
-                  end={{ x: 1, y: 1 }} // 오른쪽 아래
+                  colors={['#FFFFFF', item.backgroundColor]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={styles.gradient}
                 >
-                  <Image
-                    source={item.image}
-                    style={styles.image as any} // 타입 문제 해결
-                  />
+                  <Image source={item.image} style={styles.image as any} />
                   <View style={styles.textBelowBox}>
                     {renderTextBelowBox(item.id)}
                   </View>
@@ -513,7 +474,7 @@ const LoginPage = () => {
           </SafeAreaView>
 
           <View style={styles.previewContainer}>
-            <TouchableOpacity onPress={() => closeModal()}>
+            <TouchableOpacity onPress={onClose}>
               <Text style={styles.previewText}>
                 비회원으로 <Text style={styles.previewLink}>미리보기</Text>
               </Text>

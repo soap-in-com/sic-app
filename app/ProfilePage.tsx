@@ -124,7 +124,7 @@
 //                 source={
 //                   profileImage
 //                     ? { uri: profileImage }
-//                     : require('../../assets/images/user.png')
+//                     : require('../assets/images/user.png')
 //                 }
 //                 style={profileImage ? styles.imageFilled : styles.imageDefault}
 //                 resizeMode="cover"
@@ -284,6 +284,7 @@
 
 // export default ProfilePage;
 
+// ProfilePage.tsx
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
@@ -298,17 +299,11 @@ import {
 import Modal from 'react-native-modal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const ProfilePage = () => {
-  const [isModalVisible, setModalVisible] = useState(true);
+const ProfilePage = ({ onClose }: { onClose: () => void }) => {
   const [isImageModalVisible, setImageModalVisible] = useState(false);
   const [nickname, setNickname] = useState('');
   const [placeholderVisible, setPlaceholderVisible] = useState(true);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-
-  // 모달 닫기 함수
-  const closeModal = () => {
-    setModalVisible(false);
-  };
 
   // 이미지 모달 토글 함수
   const toggleImageModal = () => {
@@ -326,7 +321,7 @@ const ProfilePage = () => {
     if (nickname) {
       console.log('닉네임 저장:', nickname);
     }
-    closeModal();
+    onClose(); // 닉네임 저장 후 모달 닫기
   };
 
   // 갤러리에서 이미지 선택 함수
@@ -361,9 +356,9 @@ const ProfilePage = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Modal
-        isVisible={isModalVisible}
-        onBackdropPress={closeModal}
-        onSwipeComplete={closeModal} // 스와이프 시 모달 닫기
+        isVisible
+        onBackdropPress={onClose}
+        onSwipeComplete={onClose} // 스와이프 시 모달 닫기
         swipeDirection={['down']} // 아래로 스와이프 가능
         style={styles.modal}
       >

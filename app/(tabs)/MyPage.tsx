@@ -423,11 +423,12 @@
 //   },
 // });
 
+// MyPage.tsx
 import Slider from '@react-native-community/slider';
-import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Switch,
@@ -436,6 +437,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AskPage from '../AskPage';
+import LoginPage from '../LoginPage';
+import ProfilePage from '../ProfilePage';
+import TermsOfService from '../TermsOfService';
 
 const MenuButton = ({
   children,
@@ -519,28 +524,12 @@ const SettingOption = ({
 };
 
 export default function MyPage() {
-  const [pushNotificationsEnabled, setPushNotificationsEnabled] =
-    useState(false);
+  const [isAskPageVisible, setIsAskPageVisible] = useState(false);
+  const [isLoginPageVisible, setIsLoginPageVisible] = useState(false);
+  const [isProfilePageVisible, setIsProfilePageVisible] = useState(false);
+  const [isTermsOfServiceVisible, setIsTermsOfServiceVisible] = useState(false);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
-  const [fontSize, setFontSize] = useState(25); // 기본 글자 크기 설정
-  const navigation = useNavigation();
-
-  useEffect(() => {
-    // 다크모드 상태가 변경될 때마다 콘솔에 로그를 찍어 확인할 수 있습니다.
-    console.log('Dark mode:', darkModeEnabled ? 'Enabled' : 'Disabled');
-  }, [darkModeEnabled]);
-
-  const handleProfilePress = () => {
-    navigation.navigate('LoginPage' as never);
-  };
-
-  const handleTermsOfServicePress = () => {
-    navigation.navigate('TermsOfService' as never);
-  };
-
-  const handleInquiryPress = () => {
-    navigation.navigate('AskPage' as never);
-  };
+  const [fontSize, setFontSize] = useState(25);
 
   return (
     <SafeAreaView
@@ -564,7 +553,7 @@ export default function MyPage() {
         <View style={styles.innerContainer}>
           <TouchableOpacity
             style={styles.myProfile}
-            onPress={handleProfilePress}
+            onPress={() => setIsLoginPageVisible(true)}
             accessibilityLabel="로그인 버튼"
           >
             <View style={styles.profileCircle}>
@@ -670,7 +659,7 @@ export default function MyPage() {
               <View style={styles.borderLine} />
               <MenuButton
                 fontSize={fontSize - 4}
-                onPress={handleInquiryPress}
+                onPress={() => setIsAskPageVisible(true)}
                 isDarkMode={darkModeEnabled}
               >
                 문의하기
@@ -678,7 +667,7 @@ export default function MyPage() {
               <View style={styles.borderLine} />
               <MenuButton
                 fontSize={fontSize - 4}
-                onPress={handleTermsOfServicePress}
+                onPress={() => setIsTermsOfServiceVisible(true)}
                 isDarkMode={darkModeEnabled}
               >
                 서비스 이용 약관
@@ -709,6 +698,40 @@ export default function MyPage() {
             </View>
           </View>
         </View>
+
+        {/* 모달 컴포넌트 */}
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={isAskPageVisible}
+          onRequestClose={() => setIsAskPageVisible(false)}
+        >
+          <AskPage onClose={() => setIsAskPageVisible(false)} />
+        </Modal>
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={isLoginPageVisible}
+          onRequestClose={() => setIsLoginPageVisible(false)}
+        >
+          <LoginPage onClose={() => setIsLoginPageVisible(false)} />
+        </Modal>
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={isProfilePageVisible}
+          onRequestClose={() => setIsProfilePageVisible(false)}
+        >
+          <ProfilePage onClose={() => setIsProfilePageVisible(false)} />
+        </Modal>
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={isTermsOfServiceVisible}
+          onRequestClose={() => setIsTermsOfServiceVisible(false)}
+        >
+          <TermsOfService onClose={() => setIsTermsOfServiceVisible(false)} />
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -717,7 +740,6 @@ export default function MyPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     padding: 8,
   },
   scrollViewContent: {
