@@ -1,4 +1,5 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native'; // useNavigation 훅 임포트
 import React, { useState } from 'react';
 import {
   Alert,
@@ -14,10 +15,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const AskPage = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const navigation = useNavigation(); // useNavigation 훅 사용
 
   // 뒤로 가기 버튼을 눌렀을 때 실행될 함수
   const handleBackPress = () => {
-    Alert.alert('', '뒤로 가기 버튼이 눌렸습니다.'); // 알림의 제목을 빈 문자열로 설정
+    navigation.goBack(); // 뒤로 가기
   };
 
   // 문의 내용 보내기 함수
@@ -112,7 +114,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   submitButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1E90FF',
     paddingVertical: 15,
     borderRadius: 5,
     alignItems: 'center',

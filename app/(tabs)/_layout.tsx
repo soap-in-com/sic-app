@@ -15,7 +15,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="home"
+        name="WeatherScreen"
         options={{
           title: '홈',
           tabBarIcon: ({ color, focused }) => (
@@ -72,33 +72,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="mymenu"
+        name="MyPage"
         options={{
           title: '설정',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon
-              name={focused ? 'settings' : 'settings-outline'}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="ask"
-        options={{
-          title: '문의하기',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon
-              name={focused ? 'settings' : 'settings-outline'}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="TermsOfService"
-        options={{
-          title: '서비스이용약관',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name={focused ? 'settings' : 'settings-outline'}

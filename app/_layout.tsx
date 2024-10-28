@@ -33,6 +33,8 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="AskPage" options={{ title: '문의하기' }} />
+        <Stack.Screen name="MyPage" options={{ title: '설정' }} />
         <Stack.Screen name="+not-found" />
       </Stack>
     </ThemeProvider>
