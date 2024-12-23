@@ -17,3 +17,10 @@
 - 강대규 : FE(지도화면)
 - 조하늘 : FE(설정화면)
 - 홍성진 : BE
+
+## 개발환경
+- OS : Windows, mac OS
+- 개발환경(IDE) : Visual Studio Code
+- 개발도구 : React Native(Expo), Express, Firebase
+- 개발언어 : TypeScript
+  
