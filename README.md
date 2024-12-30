@@ -23,4 +23,9 @@
 - 개발환경(IDE) : Visual Studio Code
 - 개발도구 : React Native(Expo), Express, Firebase
 - 개발언어 : TypeScript
+- 의사소통 : zoom, 오프라인
+
+## 프로젝트 작동 동영상
+- https://youtu.be/L036vKG1oNc
+
   
