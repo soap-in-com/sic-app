@@ -23,7 +23,7 @@
 - 개발환경(IDE) : Visual Studio Code
 - 개발도구 : React Native(Expo), Express, Firebase
 - 개발언어 : TypeScript
-- 의사소통 : zoom, 오프라인
+- 의사소통 : Zoom, 오프라인
 
 ## 기능 목록
 - Home
